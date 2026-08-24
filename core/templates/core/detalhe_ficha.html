@@ -1,0 +1,646 @@
+{% extends 'core/base.html' %}
+
+{% block title %}Ficha #{{ ficha.id }}{% endblock %}
+{% block header_title %}Ficha #{{ ficha.id }}{% endblock %}
+
+{% block extra_css %}
+<style>
+  /* Ajustes visuais alinhados com o design system do base.html */
+  .badge-status-ok {
+    background-color: var(--ok-100);
+    color: var(--ok-500);
+    border: 1px solid rgba(47, 158, 91, 0.25);
+  }
+  
+  .badge-status-alert {
+    background-color: var(--alert-100);
+    color: var(--alert-500);
+    border: 1px solid rgba(214, 72, 63, 0.25);
+  }
+
+  .badge-tipo {
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+
+  .preview-box {
+    font-family: var(--font-mono);
+    font-size: 0.8rem;
+    border-radius: 4px;
+  }
+
+  .table-custom th {
+    font-family: var(--font-display);
+    text-transform: uppercase;
+    font-size: 0.8rem;
+    letter-spacing: 0.05em;
+    color: var(--steel-500);
+    background-color: #fafafa;
+    border-bottom: 2px solid var(--steel-100);
+  }
+
+  .card-header-title {
+    font-family: var(--font-display);
+    font-size: 1.05rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+    color: var(--graphite-950);
+  }
+
+  .badge-status-warning {
+    background-color: #fef3c7; /* Amarelo/âmbar suave de fundo */
+    color: #d97706;            /* Texto e ícone em tom âmbar escuro */
+    border: 1px solid #fcd34d;  /* Borda suave */
+    font-weight: 600;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+
+{# ===== CABEÇALHO COMPACTO ===== #}
+<div class="card p-3 mb-4 stat-card bg-white">
+  <div class="d-flex align-items-center justify-content-between flex-wrap gap-3">
+    <div class="d-flex align-items-center gap-3">
+      <div class="bg-dark text-white p-2.5 rounded text-center" style="min-width: 70px; background-color: var(--graphite-950) !important;">
+        <span class="d-block text-uppercase text-muted small lh-1 mb-1" style="font-size: 0.65rem;">Ficha</span>
+        <span class="mono fw-bold fs-4" style="color: var(--amber-500);">#{{ ficha.id }}</span>
+      </div>
+      <div>
+        <div class="d-flex align-items-center gap-2 mb-1">
+          {% if ficha.tipo == 'numerada' %}
+            <span class="badge bg-warning text-dark border badge-tipo" style="background-color: var(--amber-500) !important; color: var(--graphite-950) !important;">
+              {{ ficha.get_tipo_display }}
+            </span>
+          {% else %}
+            <span class="badge bg-secondary text-white border badge-tipo">
+              {{ ficha.get_tipo_display }}
+            </span>
+          {% endif %}
+          <span class="text-secondary small mono ms-2">
+            <i class="fa-regular fa-calendar me-1"></i>{{ ficha.data_criacao|date:"d/m/Y" }}
+          </span>
+        </div>
+        <div class="d-flex align-items-center flex-wrap gap-2 small text-muted">
+          <span>Supervisor: <strong class="text-dark">{{ ficha.usuario }}</strong></span>
+
+          {% if ficha.operador %}
+            <span class="text-secondary opacity-50">•</span>
+            
+            <div class="d-inline-flex align-items-center gap-1 px-2 py-1 rounded" 
+                style="background: rgba(232, 98, 44, 0.1); border: 1px solid var(--amber-500);">
+              <i class="fa-solid fa-user-gear fs-7" style="color: var(--amber-500);"></i>
+              <span class="text-uppercase mono fw-bold" style="font-size: 0.72rem; color: var(--amber-600);">Operador:</span>
+              <strong class="text-dark fw-bold ms-1" style="font-size: 0.85rem;">{{ ficha.operador.nome }}</strong>
+            </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row g-4">
+  {# --- COLUNA ESQUERDA: REGISTRO E HISTÓRICO --- #}
+  <div class="col-lg-7 col-xl-8">
+    
+    {# Formulário de Lançamento #}
+    <div class="card mb-4 bg-white">
+      <div class="card-header bg-white py-3 border-bottom d-flex justify-content-between align-items-center">
+        <h6 class="card-header-title mb-0">
+          <i class="fa-solid fa-stopwatch me-2" style="color: var(--amber-500);"></i>Registrar Produção da Hora
+        </h6>
+        <span class="badge bg-light text-secondary border mono" style="font-size: 0.7rem;">Apontamento</span>
+      </div>
+
+      <div class="card-body p-4">
+        {% if itens_simples %}
+          <form method="post" id="formRegistro">
+            {% csrf_token %}
+            <input type="hidden" name="acao" value="registrar_producao">
+
+            <div class="row g-3">
+              <!-- Modelo (3 Colunas) -->
+              <div class="col-md-3">
+                <label class="form-label fw-semibold small text-uppercase text-secondary" for="{{ registro_form.item_ficha.id_for_label }}">
+                  Modelo
+                </label>
+                {{ registro_form.item_ficha }}
+                {% for error in registro_form.item_ficha.errors %}
+                  <div class="text-danger small mt-1">{{ error }}</div>
+                {% endfor %}
+              </div>
+
+              <!-- Peça (3 Colunas) -->
+              <div class="col-md-3">
+                <label class="form-label fw-semibold small text-uppercase text-secondary" for="{{ registro_form.peca.id_for_label }}">
+                  Peça (Opcional)
+                </label>
+                {{ registro_form.peca }}
+                {% for error in registro_form.peca.errors %}
+                  <div class="text-danger small mt-1">{{ error }}</div>
+                {% endfor %}
+              </div>
+              
+              <!-- Campo para exibição visual do intervalo -->
+              <div class="mb-3">
+                <label class="form-label small text-uppercase mono text-secondary fw-semibold">Horário / Período</label>
+                <input type="text" id="display_periodo_atual" class="form-control" readonly placeholder="Selecione o modelo/peça...">
+                
+                <!-- Campo oculto real do Form Django (ID retornado por {{ registro_form.periodo.id_for_label }}) -->
+                <input type="hidden" name="periodo" id="{{ registro_form.periodo.id_for_label }}">
+                
+                {% for error in registro_form.periodo.errors %}
+                  <div class="text-danger small mt-1">{{ error }}</div>
+                {% endfor %}
+              </div>
+
+              <!-- Qtd Produzida (2 Colunas) -->
+              <div class="col-md-2">
+                <label class="form-label fw-semibold small text-uppercase text-secondary" for="{{ registro_form.quantidade_produzida.id_for_label }}">
+                  Produzido
+                </label>
+                {{ registro_form.quantidade_produzida }}
+                {% for error in registro_form.quantidade_produzida.errors %}
+                  <div class="text-danger small mt-1">{{ error }}</div>
+                {% endfor %}
+              </div>
+
+              <!-- Qtd Perda (2 Colunas) -->
+              <div class="col-md-2">
+                <label class="form-label fw-semibold small text-uppercase text-secondary" for="{{ registro_form.quantidade_perda.id_for_label }}">
+                  Perda
+                </label>
+                {{ registro_form.quantidade_perda }}
+                {% for error in registro_form.quantidade_perda.errors %}
+                  <div class="text-danger small mt-1">{{ error }}</div>
+                {% endfor %}
+              </div>
+            </div>
+
+            {# Alerta Visual Dinâmico #}
+            <div id="previewMeta" class="form-text mt-3 p-2.5 rounded bg-light border text-muted preview-box">
+              Selecione um modelo para calcular a meta da hora.
+            </div>
+
+            <button type="submit" class="btn btn-signal btn-lg w-100 mt-3" id="btnRegistro">
+              <i class="fa-solid fa-check me-2"></i> Confirmar Lançamento
+            </button>
+          </form>
+        {% else %}
+          <div class="text-center py-4 text-secondary">
+            <i class="fa-solid fa-circle-exclamation fs-2 mb-2 d-block" style="color: var(--amber-500);"></i>
+            <p class="mb-0 fw-semibold">Nenhum modelo cadastrado nesta ficha.</p>
+            <small class="text-muted">Adicione um modelo no painel ao lado para liberar o registro de horas.</small>
+          </div>
+        {% endif %}
+      </div>
+    </div>
+
+    {# Tabela de Últimos Lançamentos #}
+    {% if ultimos_registros %}
+      <div class="card mb-4 bg-white">
+        <div class="card-header bg-white py-3 border-bottom d-flex justify-content-between align-items-center">
+          <h6 class="card-header-title mb-0">
+            <i class="fa-solid fa-clock-rotate-left me-2" style="color: var(--graphite-950);"></i>Últimos Lançamentos
+          </h6>
+          {% if ficha.tipo == 'numerada' %}
+            <span class="badge bg-light text-dark border mono" style="font-size: 0.7rem;">
+              Ficha Numerada
+            </span>
+          {% endif %}
+        </div>
+
+        <div class="table-responsive">
+          <table class="table table-hover align-middle mb-0 text-center small table-custom">
+            <thead>
+              <tr>
+                <th class="text-start ps-3">Hora - Período</th>
+                <th class="text-start">Modelo / Peça</th>
+                {% if ficha.tipo == 'numerada' %}
+                  <th class="text-start">Meta Planejada</th>
+                {% endif %}
+                <th>Pares/H</th>
+                <th>Perda</th>
+                <th>Produzido</th>
+                <th>Diferença</th>
+                <th class="pe-3">Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for reg in ultimos_registros %}
+                <!-- Define a classe da linha baseada no tipo de lançamento -->
+                <tr class="{% if reg.quantidade_perda > 0 and reg.quantidade_produzida == 0 %}table-danger bg-opacity-10{% elif reg.quantidade_perda > 0 %}table-warning bg-opacity-10{% elif reg.na_meta %}row-ok{% else %}row-alert{% endif %}">
+                  
+                  <!-- Troque a coluna antiga pelo rótulo do período -->
+                  <td class="text-start ps-3 fw-bold mono text-secondary">
+                    {{ reg.periodo.rotulo|default:reg.periodo }}
+                  </td>
+                  <td class="text-start fw-bold text-dark">
+                    {{ reg.item_rotulo }}
+                  </td>
+
+                  {% if ficha.tipo == 'numerada' %}
+                    <td class="fw-medium text-muted text-start mono">{{ reg.qtd_planejada|default:"—" }}</td>
+                  {% endif %}
+
+                  <td class="fw-medium text-dark mono">{{ reg.meta_padrao }} <small class="text-muted">prs/h</small></td>
+                  
+                  <!-- Coluna Perda -->
+                  <td class="fw-bold fs-6 mono {% if reg.quantidade_perda > 0 %}text-danger{% else %}text-muted{% endif %}">
+                    {% if reg.quantidade_perda > 0 %}{{ reg.quantidade_perda }}{% else %}0{% endif %}
+                  </td>
+                  
+                  <!-- Coluna Produzido -->
+                  <td class="fw-bold fs-6 mono {% if reg.quantidade_produzida == 0 %}text-muted{% endif %}">
+                    {{ reg.quantidade_produzida }}
+                  </td>
+
+                  <!-- Coluna Diferença -->
+                  <td class="fw-bold mono">
+                    {% if reg.quantidade_produzida == 0 and reg.quantidade_perda > 0 %}
+                      <span class="text-muted">—</span>
+                    {% else %}
+                      <span class="{% if reg.diferenca >= 0 %}text-success{% else %}text-danger{% endif %}">
+                        {% if reg.diferenca > 0 %}+{% endif %}{{ reg.diferenca }}
+                      </span>
+                    {% endif %}
+                  </td>
+
+                  <!-- Coluna Status -->
+                  <td class="pe-3">
+                    {% if reg.quantidade_produzida == 0 and reg.quantidade_perda > 0 %}
+                      <span class="badge bg-danger-subtle text-danger border border-danger-subtle px-2 py-1">
+                        <i class="fa-solid fa-circle-minus me-1"></i>Perda
+                      </span>
+                    {% elif reg.quantidade_perda > 0 %}
+                      <span class="badge badge-status-warning px-2 py-1">
+                        <i class="fa-solid fa-triangle-exclamation me-1"></i>Parcial Perda
+                      </span>
+                    {% elif reg.na_meta %}
+                      <span class="badge badge-status-ok px-2 py-1">
+                        <i class="fa-solid fa-check me-1"></i>Na Meta
+                      </span>
+                    {% else %}
+                      <span class="badge badge-status-alert px-2 py-1">
+                        <i class="fa-solid fa-xmark me-1"></i>Abaixo
+                      </span>
+                    {% endif %}
+                  </td>
+
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    {% endif %}
+
+  </div>
+
+  {# --- COLUNA DIREITA: MODELOS E PEÇAS --- #}
+  <div class="col-lg-5 col-xl-4">
+    
+    {# Modelos Adicionados #}
+    <div class="card mb-4 bg-white">
+      <div class="card-header bg-white py-3 border-bottom">
+        <h6 class="card-header-title mb-0">
+          <i class="fa-solid fa-shoe-prints me-2" style="color: var(--amber-500);"></i>Modelos na Ficha
+        </h6>
+      </div>
+
+      <div class="card-body p-3">
+        {% for linha in itens_simples %}
+          <div class="border rounded p-3 mb-3" style="background-color: var(--canvas);">
+            <div class="d-flex justify-content-between align-items-start mb-2">
+              <div>
+                <div class="fw-bold fs-6 text-dark display-font">
+                  {{ linha.modelo.numero }} <span class="text-secondary fw-normal">· Nº {{ linha.item.numeracao }}</span>
+                </div>
+                <div class="text-muted small mono mt-1">
+                  Meta: <strong>{{ linha.meta_hora }}</strong> pares/h
+                  {% if ficha.tipo == 'numerada' and linha.item.quantidade_planejada %}
+                    <br><span class="text-secondary">Planejado: <strong class="text-dark">{{ linha.item.quantidade_planejada }}</strong> pares</span>
+                    <br><span class="text-secondary">Produzido: <strong class="text-dark">{{ linha.total_produzido }}</strong> pares</span> 
+                  {% else %}
+                    <br><span class="text-secondary">Produzido: <strong class="text-dark">{{ linha.total_produzido }}</strong> pares</span> 
+                  {% endif %}
+
+                  {% if linha.total_perda > 0 %}
+                    <br><span class="text-danger">Perda: <strong class="text-dark">{{ linha.total_perda }}</strong> pares</span>
+                  {% endif %}
+                </div>
+              </div>
+              <span class="badge bg-white text-dark border mono">Item #{{ linha.item.id }}</span>
+            </div>
+
+            {# Peças Habilitadas #}
+            {% if linha.pecas_habilitadas %}
+              <div class="mt-2 pt-2 border-top">
+                <div class="small fw-semibold text-secondary mb-1" style="font-size: 0.75rem;">PEÇAS HABILITADAS:</div>
+                <div class="d-flex flex-wrap gap-1">
+                  {% for peca_hab in linha.pecas_habilitadas %}
+                    <span class="badge bg-white text-dark border fw-normal">
+                      <i class="fa-solid fa-check me-1" style="color: var(--ok-500);"></i>
+                      {{ peca_hab.peca.nome }}
+                      {% if ficha.tipo == 'numerada' %}
+                        {# Ficha Numerada: exibe Produzido / Planejado #}
+                        Produzido: <strong class="text-dark">{{ peca_hab.total_produzido }}</strong> / {{ peca_hab.quantidade_planejada|default:"-" }} Pares
+                        {% if peca_hab.total_perda > 0 %}
+                          <span class="text-danger">/ Perda: <strong class="text-dark">{{ peca_hab.total_perda }}</strong></span>
+                        {% endif %}
+                      {% else %}
+                        {# Ficha Padrão: exibe apenas o Produzido #}
+                        Produzido: <strong class="text-dark">{{ peca_hab.total_produzido }}</strong> Pares 
+                        {% if peca_hab.total_perda > 0 %}
+                          <span class="text-danger">/ Perda: <strong class="text-dark">{{ peca_hab.total_perda }}</strong></span>
+                        {% endif %}
+                      {% endif %}
+                    </span>
+                  {% endfor %}
+                </div>
+              </div>
+            {% endif %}
+
+            {# Formulário Inline para Habilitar Peça #}
+            {% if linha.pecas_disponiveis %}
+              <form method="post" class="mt-3 pt-2 border-top">
+                {% csrf_token %}
+                <input type="hidden" name="acao" value="adicionar_peca">
+                <input type="hidden" name="item_ficha" value="{{ linha.item.id }}">
+                
+                <label class="form-label small text-muted mb-1" style="font-size: 0.75rem;">Habilitar outra peça:</label>
+                
+                <div class="input-group input-group-sm">
+                  <select name="peca" class="form-select" required>
+                    <option value="">Selecione a peça...</option>
+                    {% for peca in linha.pecas_disponiveis %}
+                      <option value="{{ peca.id }}">{{ peca.nome }}</option>
+                    {% endfor %}
+                  </select>
+
+                  {# Exibe o campo de Qtd Planejada APENAS se a ficha for Numerada #}
+                  {% if ficha.tipo == 'numerada' %}
+                    <input type="number" 
+                          name="quantidade_planejada" 
+                          class="form-control mono" 
+                          placeholder="Qtd. Plan" 
+                          min="1" 
+                          style="max-width: 90px;" 
+                          required>
+                  {% endif %}
+
+                  <button type="submit" class="btn btn-signal">
+                    <i class="fa-solid fa-plus"></i>
+                  </button>
+                </div>
+              </form>
+            {% endif %}
+          </div>
+        {% empty %}
+          <div class="text-center py-3 text-muted small">
+            Nenhum modelo associado a esta ficha ainda.
+          </div>
+        {% endfor %}
+      </div>
+    </div>
+
+    {# Adicionar Novo Modelo #}
+    <div class="card bg-white">
+      <div class="card-header bg-white py-3 border-bottom">
+        <h6 class="card-header-title mb-0">
+          <i class="fa-solid fa-plus me-2" style="color: var(--ok-500);"></i>Adicionar Modelo
+        </h6>
+      </div>
+
+      <div class="card-body p-3">
+        <form method="post" id="formAddItem">
+          {% csrf_token %}
+          <input type="hidden" name="acao" value="adicionar_modelo">
+
+          {# 1. Modelo #}
+          <div class="mb-3">
+            <label class="form-label small fw-semibold text-secondary text-uppercase" for="{{ item_form.modelo.id_for_label }}">
+              {{ item_form.modelo.label }}
+            </label>
+            {{ item_form.modelo }}
+            {% for error in item_form.modelo.errors %}
+              <div class="text-danger small mt-1">{{ error }}</div>
+            {% endfor %}
+          </div>
+
+          {# 2. Numeração (Tamanho do Calçado) #}
+          <div class="mb-3">
+            <label class="form-label small fw-semibold text-secondary text-uppercase" for="{{ item_form.numeracao.id_for_label }}">
+              {{ item_form.numeracao.label }}
+            </label>
+            {{ item_form.numeracao }}
+            {% for error in item_form.numeracao.errors %}
+              <div class="text-danger small mt-1">{{ error }}</div>
+            {% endfor %}
+          </div>
+
+          {# 3. SE FOR numerada, pede a quantidade desejada #}
+          {% if ficha.tipo == 'numerada' %}
+            <div class="mb-3">
+              <label class="form-label small fw-semibold text-secondary text-uppercase" for="{{ item_form.quantidade_planejada.id_for_label }}">
+                {{ item_form.quantidade_planejada.label }}
+              </label>
+              {{ item_form.quantidade_planejada }}
+              <div class="form-text small mono mt-1 p-2 bg-light rounded border text-muted" id="previewTempoEstimado">
+                Selecione um modelo para calcular o tempo.
+              </div>
+              {% for error in item_form.quantidade_planejada.errors %}
+                <div class="text-danger small mt-1">{{ error }}</div>
+              {% endfor %}
+            </div>
+          {% else %}
+            {{ item_form.quantidade_planejada }}
+          {% endif %}
+
+          <button type="submit" class="btn btn-graphite w-100 mt-2" id="btnAddItem">
+            <i class="fa-solid fa-plus me-1"></i> Incluir Modelo na Ficha
+          </button>
+        </form>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+{{ tempos_por_modelo|json_script:"tempos-por-modelo-data" }}
+{{ metas_por_item|json_script:"metas-por-item-data" }}
+{{ pecas_por_item|json_script:"pecas-por-item-data" }}
+
+<script>
+  const temposPorModelo = JSON.parse(document.getElementById('tempos-por-modelo-data')?.textContent || '{}');
+  const metasPorItem = JSON.parse(document.getElementById('metas-por-item-data')?.textContent || '{}');
+  const pecasPorItem = JSON.parse(document.getElementById('pecas-por-item-data')?.textContent || '{}');
+  
+  // Lê o JSON dos períodos preenchido diretamente da View
+  const proximosPeriodos = JSON.parse('{{ proximos_periodos_json|escapejs }}');
+
+  // Elements - Form de Modelo (Tempo Estimado)
+  const selectModeloItem = document.getElementById('{{ item_form.modelo.id_for_label }}');
+  const inputQtdPlanejada = document.getElementById('{{ item_form.quantidade_planejada.id_for_label }}');
+  const previewTempoEl = document.getElementById('previewTempoEstimado');
+
+  // Elements - Form de Registro
+  const selectItem = document.getElementById('{{ registro_form.item_ficha.id_for_label }}');
+  const selectPeca = document.getElementById('{{ registro_form.peca.id_for_label }}');
+  const inputQtdProduzida = document.getElementById('{{ registro_form.quantidade_produzida.id_for_label }}');
+  const previewMetaEl = document.getElementById('previewMeta');
+
+  // 1. Função: Preview de Tempo Estimado
+  function atualizarPreviewTempo() {
+    if (!selectModeloItem || !inputQtdPlanejada || !previewTempoEl) return;
+    const tempoModelo = parseFloat(temposPorModelo[selectModeloItem.value]);
+    const qtd = parseInt(inputQtdPlanejada.value, 10);
+
+    if (!tempoModelo) {
+      previewTempoEl.textContent = 'Selecione um modelo para ver o tempo estimado.';
+      return;
+    }
+    if (!qtd || qtd <= 0) {
+      previewTempoEl.textContent = `Meta base: ${(60 / tempoModelo).toFixed(1)} pares/hora.`;
+      return;
+    }
+
+    const totalMin = qtd * tempoModelo;
+    const horas = Math.floor(totalMin / 60);
+    const minutosRestantes = Math.round(totalMin % 60);
+    previewTempoEl.innerHTML = `<i class="fa-solid fa-clock me-1" style="color: var(--amber-500);"></i> Tempo estimado: <strong>${totalMin.toFixed(1)} min</strong> (~${horas}h${String(minutosRestantes).padStart(2, '0')}).`;
+  }
+
+  // 2. Função: Atualizar Peças Disponíveis
+  function atualizarPecasDisponiveis() {
+    if (!selectItem || !selectPeca) return;
+    const pecas = pecasPorItem[selectItem.value] || [];
+    const valorAtual = selectPeca.value;
+
+    selectPeca.innerHTML = '<option value="">—— —— —— —— ——</option>';
+
+    pecas.forEach(p => {
+      const opt = document.createElement('option');
+      opt.value = p.id;
+      opt.textContent = p.nome;
+      opt.dataset.metaHora = p.meta_hora;
+      selectPeca.appendChild(opt);
+    });
+
+    if ([...selectPeca.options].some(o => o.value === valorAtual)) {
+      selectPeca.value = valorAtual;
+    }
+  }
+
+  // 3. Função: Preview do Alerta de Meta
+  function atualizarPreviewMeta() {
+    if (!selectItem || !previewMetaEl) return;
+    
+    const itemId = selectItem.value;
+    if (!itemId) {
+      previewMetaEl.className = "form-text mt-3 p-2.5 rounded bg-light border text-muted preview-box";
+      previewMetaEl.textContent = 'Selecione um modelo para calcular a meta da hora.';
+      return;
+    }
+
+    const pecaId = selectPeca ? selectPeca.value : '';
+    let meta = null;
+    let rotuloContexto = '';
+
+    if (pecaId && selectPeca.selectedIndex >= 0) {
+      const optSelecionada = selectPeca.options[selectPeca.selectedIndex];
+      meta = parseFloat(optSelecionada.dataset.metaHora);
+      rotuloContexto = `Meta da peça (${optSelecionada.text})`;
+    } else {
+      meta = parseFloat(metasPorItem[itemId]);
+      rotuloContexto = `Meta do modelo (Par completo)`;
+    }
+
+    if (!meta || isNaN(meta)) {
+      previewMetaEl.className = "form-text mt-3 p-2.5 rounded bg-light border text-muted preview-box";
+      previewMetaEl.textContent = 'Selecione um item para ver a meta.';
+      return;
+    }
+
+    const produzido = parseInt(inputQtdProduzida?.value, 10);
+
+    if (isNaN(produzido)) {
+      previewMetaEl.className = "form-text mt-3 p-2.5 rounded bg-light border text-dark preview-box";
+      previewMetaEl.innerHTML = `<i class="fa-solid fa-bullseye me-1" style="color: var(--amber-500);"></i> ${rotuloContexto}: <strong>${meta}</strong> pares/hora.`;
+      return;
+    }
+
+    if (produzido >= meta) {
+      const sobra = (produzido - meta).toFixed(1);
+      previewMetaEl.className = "form-text mt-3 p-2.5 rounded badge-status-ok preview-box fw-semibold";
+      previewMetaEl.innerHTML = `<i class="fa-solid fa-circle-check me-1" style="color: var(--ok-500);"></i> ${rotuloContexto}: ${meta} pares/h — <strong>Dentro da meta!</strong> (+${sobra} pares)`;
+    } else {
+      const falta = (meta - produzido).toFixed(1);
+      previewMetaEl.className = "form-text mt-3 p-2.5 rounded badge-status-alert preview-box fw-semibold";
+      previewMetaEl.innerHTML = `<i class="fa-solid fa-triangle-exclamation me-1" style="color: var(--alert-500);"></i> ${rotuloContexto}: ${meta} pares/h — <strong>Abaixo da meta</strong> (Faltam ${falta} pares)`;
+    }
+  }
+
+  // 4. Função: Sugestão de Período (Preenche a tela e o input oculta de envio)
+  function sugerirProximoPeriodo() {
+    if (!selectItem) return;
+
+    const itemId = selectItem.value;
+    const pecaId = selectPeca ? selectPeca.value : '';
+
+    const chaveLookup = pecaId ? `${itemId}_${pecaId}` : `${itemId}`;
+    
+    const proximoObj = proximosPeriodos[chaveLookup]; 
+
+    const displayPeriodo = document.getElementById('display_periodo_atual');
+    const hiddenInputPeriodo = document.getElementById('{{ registro_form.periodo.id_for_label }}');
+
+    if (proximoObj) {
+      if (displayPeriodo) displayPeriodo.value = proximoObj.rotulo;
+      if (hiddenInputPeriodo) hiddenInputPeriodo.value = proximoObj.id;
+    } else {
+      if (displayPeriodo) displayPeriodo.value = "Sem horários restantes";
+      if (hiddenInputPeriodo) hiddenInputPeriodo.value = "";
+    }
+  }
+
+  // Event Listeners (Garante que tudo atualize junto ao selecionar opções)
+  selectModeloItem?.addEventListener('change', atualizarPreviewTempo);
+  inputQtdPlanejada?.addEventListener('input', atualizarPreviewTempo);
+
+  selectItem?.addEventListener('change', () => {
+    atualizarPecasDisponiveis();
+    atualizarPreviewMeta();
+    sugerirProximoPeriodo();
+  });
+
+  selectPeca?.addEventListener('change', () => {
+    atualizarPreviewMeta();
+    sugerirProximoPeriodo();
+  });
+
+  inputQtdProduzida?.addEventListener('input', atualizarPreviewMeta);
+
+  // Prevenção de duplo submit
+  document.getElementById('formRegistro')?.addEventListener('submit', function () {
+    document.getElementById('btnRegistro').disabled = true;
+  });
+  document.getElementById('formAddItem')?.addEventListener('submit', function () {
+    document.getElementById('btnAddItem').disabled = true;
+  });
+
+  // Execução Inicial na carga da página
+  if (selectItem && selectItem.value) {
+    atualizarPecasDisponiveis();
+    atualizarPreviewMeta();
+    sugerirProximoPeriodo();
+  }
+</script>
+{% endblock %}

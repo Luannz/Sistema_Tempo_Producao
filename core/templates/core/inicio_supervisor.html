@@ -1,0 +1,228 @@
+{% extends 'core/base.html' %}
+
+{% block title %}Painel do Supervisor{% endblock %}
+{% block header_title %}Painel do Supervisor{% endblock %}
+
+{% block content %}
+
+  {# ===== CHAMADA PRINCIPAL: abrir nova ficha ===== #}
+  <div class="card p-4 mb-4" style="background: var(--graphite-950); border: none;">
+    <div class="d-flex align-items-center justify-content-between flex-wrap gap-3">
+      <div>
+        <div class="text-white-50 small text-uppercase mono">{{ total_fichas_hoje }} ficha{{ total_fichas_hoje|pluralize }} aberta{{ total_fichas_hoje|pluralize }} hoje</div>
+        <h4 class="text-white display-font mb-0">Crie e visualize fichas</h4>
+      </div>
+      <a href="{% url 'criar_ficha' %} " class="btn btn-signal btn-lg">
+        <i class="fa-solid fa-plus me-1"></i> Nova Ficha
+      </a>
+    </div>
+  </div>
+
+  {# ===== LISTA DE FICHAS DO SUPERVISOR ===== #}
+  <div class="card shadow-sm border-0">
+    <div class="card-header bg-white border-bottom py-3 d-flex justify-content-between align-items-center">
+      <h5 class="mb-0 display-font fw-bold text-uppercase text-dark" style="letter-spacing: 0.05em;">
+        <i class="fa-solid fa-list-check me-2 text-warning"></i> Histórico de Fichas
+      </h5>
+    </div>
+
+    <div class="table-responsive">
+      <table class="table table-industrial table-hover mb-0">
+        <thead>
+          <tr>
+            <th>Código</th>
+            <th>Operador</th>
+            <th>Criação</th>
+            <th>Tipo</th>
+            <th>Modelos/Peças</th>
+            <th>Produção Total</th>
+            <th class="text-end">Ação</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for grupo in fichas_resumo %}
+            <tr>
+              <td>
+                <span class="mono fw-bold text-dark fs-6">#{{ grupo.ficha.id }}</span>
+              </td>
+
+              <td>
+                <span class="fw-medium text-dark">
+                  <i class="fa-solid fa-users me-1 text-muted"></i>{{ grupo.ficha.operador }}
+                </span>
+              </td>
+
+              <td>
+                <div class="lh-1">
+                  <span class="d-block fw-semibold text-dark">{{ grupo.ficha.data_criacao|date:"d/m/Y" }}</span>
+                  <small class="mono text-muted" style="font-size: 0.72rem;">{{ grupo.ficha.criado_em|date:"H:i" }}</small>
+                </div>
+              </td>
+
+              <td>
+                {% if grupo.ficha.tipo == 'numerada' %}
+                  <span class="badge-industrial-amber">Numerada</span>
+                {% else %}
+                  <span class="badge-industrial-steel">Padrão</span>
+                {% endif %}
+              </td>
+
+              <td>
+                <span class="fw-medium text-dark">
+                  <i class="fa-solid fa-shoe-prints me-1 text-muted"></i>
+                  {{ grupo.qtd_modelos }} Mod · {{ grupo.qtd_pecas }} Peça{{ grupo.qtd_pecas|pluralize }}
+                </span>
+              </td>
+
+              <td>
+                <div class="d-flex align-items-center gap-3">
+                  <div class="mono fw-bold text-dark fs-6">
+                    {{ grupo.total_produzido }}
+                    {% if grupo.ficha.tipo == 'numerada' and grupo.total_planejado %}
+                      <span class="text-muted fw-normal" style="font-size: 0.85rem;">/ {{ grupo.total_planejado }}</span>
+                    {% else %}
+                      <span class="text-muted fw-normal" style="font-size: 0.75rem;">pares</span>
+                    {% endif %}
+                  </div>
+
+                  {% if grupo.pct_concluido != None %}
+                    <div class="flex-grow-1" style="max-width: 120px;">
+                      <div class="progress progress-industrial">
+                        <div class="progress-bar {% if grupo.pct_concluido == 100 %}progress-bar-ok{% else %}progress-bar-amber{% endif %}" 
+                            role="progressbar" 
+                            style="width: {{ grupo.pct_concluido }}%;">
+                        </div>
+                      </div>
+                    </div>
+                    <span class="mono small fw-bold {% if grupo.pct_concluido == 100 %}text-success{% else %}text-dark{% endif %}">
+                      {{ grupo.pct_concluido }}%
+                    </span>
+                  {% endif %}
+                </div>
+              </td>
+
+              <td class="text-end">
+                <a href="{% url 'detalhe_ficha' grupo.ficha.id %}" class="btn btn-graphite btn-sm px-3">
+                  <i class="fa-solid fa-pen-to-square me-1"></i> Abrir
+                </a>
+              </td>
+            </tr>
+          {% empty %}
+            <tr>
+              <td colspan="6" class="text-center py-5">
+                <div class="text-muted">
+                  <i class="fa-solid fa-file-circle-plus fs-1 mb-3 text-secondary opacity-50 d-block"></i>
+                  <p class="mb-1 display-font fs-5">NENHUMA FICHA ENCONTRADA</p>
+                  <small class="text-secondary">Você ainda não possui fichas cadastradas no sistema.</small>
+                </div>
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {# ===== PAGINAÇÃO ===== #}
+    {% if fichas_page.has_other_pages %}
+      <div class="card-footer bg-white border-top d-flex justify-content-between align-items-center py-2">
+        <small class="mono text-muted" style="font-size: 0.75rem;">
+          EXIBINDO {{ fichas_page.start_index }}-{{ fichas_page.end_index }} DE {{ fichas_page.paginator.count }}
+        </small>
+        
+        <ul class="pagination pagination-sm mb-0">
+          {% if fichas_page.has_previous %}
+            <li class="page-item">
+              <a class="page-link text-dark" href="?page={{ fichas_page.previous_page_number }}">Anterior</a>
+            </li>
+          {% else %}
+            <li class="page-item disabled"><span class="page-link">Anterior</span></li>
+          {% endif %}
+
+          {% for num in fichas_page.paginator.page_range %}
+            {% if fichas_page.number == num %}
+              <li class="page-item active">
+                <span class="page-link" style="background: var(--amber-500); border-color: var(--amber-500); color: var(--graphite-950); font-weight: bold;">{{ num }}</span>
+              </li>
+            {% elif num > fichas_page.number|add:'-3' and num < fichas_page.number|add:'3' %}
+              <li class="page-item">
+                <a class="page-link text-dark" href="?page={{ num }}">{{ num }}</a>
+              </li>
+            {% endif %}
+          {% endfor %}
+
+          {% if fichas_page.has_next %}
+            <li class="page-item">
+              <a class="page-link text-dark" href="?page={{ fichas_page.next_page_number }}">Próximo</a>
+            </li>
+          {% else %}
+            <li class="page-item disabled"><span class="page-link">Próximo</span></li>
+          {% endif %}
+        </ul>
+      </div>
+    {% endif %}
+  </div>
+
+{% endblock %}
+{% block extra_css %}
+<style>
+  /* Ajustes específicos do estilo industrial para tabelas e métricas */
+  .table-industrial {
+    border-color: var(--steel-100);
+  }
+  
+  .table-industrial thead th {
+    font-family: var(--font-display);
+    font-size: 0.78rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    background: var(--graphite-950);
+    color: var(--steel-300);
+    border-bottom: 2px solid var(--amber-500);
+    padding: 0.75rem 1rem;
+  }
+
+  .table-industrial tbody td {
+    padding: 0.85rem 1rem;
+    vertical-align: middle;
+    border-bottom: 1px solid var(--steel-100);
+  }
+
+  .badge-industrial-amber {
+    background: var(--amber-500);
+    color: var(--graphite-950);
+    font-family: var(--font-mono);
+    font-weight: 600;
+    font-size: 0.7rem;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    padding: 0.3em 0.6em;
+    border-radius: 2px;
+  }
+
+  .badge-industrial-steel {
+    background: var(--graphite-800);
+    color: var(--steel-300);
+    font-family: var(--font-mono);
+    font-weight: 600;
+    font-size: 0.7rem;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    padding: 0.3em 0.6em;
+    border-radius: 2px;
+  }
+
+  .progress-industrial {
+    height: 6px;
+    background-color: var(--steel-100);
+    border-radius: 0;
+    overflow: hidden;
+  }
+
+  .progress-industrial .progress-bar-amber {
+    background-color: var(--amber-500);
+  }
+
+  .progress-industrial .progress-bar-ok {
+    background-color: var(--ok-500);
+  }
+</style>
+{% endblock %}

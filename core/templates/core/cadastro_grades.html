@@ -1,0 +1,183 @@
+{% extends 'core/base.html' %}
+
+{% block title %}{{ titulo }} | Painel de Produção{% endblock %}
+{% block header_title %}{{ titulo }}{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-lg-8">
+    <div class="card p-4 border-0 shadow-sm">
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <div>
+          <h5 class="display-font mb-1 text-uppercase fw-bold">{{ titulo }}</h5>
+          <p class="text-secondary small mb-0">Defina a estrutura de turnos e horários da grade.</p>
+        </div>
+        <a href="{% url 'grade_horario_list' %}" class="btn btn-outline-secondary btn-sm">
+          <i class="fa-solid fa-arrow-left me-1"></i> Voltar
+        </a>
+      </div>
+
+      {# ===== BLOCO DE ERROS ===== #}
+      {% if form.errors or formset.errors %}
+        <div class="alert alert-danger border-0 mb-4 rounded-1" role="alert">
+          <div class="fw-bold text-uppercase mono small mb-1">
+            <i class="fa-solid fa-triangle-exclamation me-1"></i> Verifique os erros no formulário:
+          </div>
+          <div class="small">
+            {{ form.errors }}
+            {% for form_item in formset %}
+              {% if form_item.errors %}
+                <div><strong>Linha {{ forloop.counter }}:</strong> {{ form_item.errors }}</div>
+              {% endif %}
+            {% endfor %}
+            {% if formset.non_form_errors %}
+              <div>{{ formset.non_form_errors }}</div>
+            {% endif %}
+          </div>
+        </div>
+      {% endif %}
+
+      <form method="post">
+        {% csrf_token %}
+
+        {# ===== IDENTIFICAÇÃO DA GRADE ===== #}
+        <div class="row g-3 mb-4">
+          <div class="col-12 col-md-8">
+            <label for="{{ form.nome.id_for_label }}" class="form-label small text-uppercase mono text-secondary fw-semibold">
+              Nome da Grade
+            </label>
+            {{ form.nome }}
+          </div>
+          <div class="col-12 col-md-4 d-flex align-items-end">
+            <div class="form-check form-switch bg-light p-2 px-3 border rounded w-100 d-flex justify-content-between align-items-center m-0">
+              <label class="form-check-label small text-uppercase mono text-secondary fw-semibold mb-0" for="{{ form.ativo.id_for_label }}">
+                Ativa
+              </label>
+              {{ form.ativo }}
+            </div>
+          </div>
+        </div>
+
+        {# ===== TABELA DE HORÁRIOS / INTERVALOS ===== #}
+        <div class="mb-4">
+          <div class="d-flex justify-content-between align-items-center mb-2">
+            <label class="form-label small text-uppercase mono text-secondary fw-semibold mb-0">
+              <i class="fa-solid fa-clock me-1"></i> Horários e Intervalos
+            </label>
+            <button type="button" id="add-linha" class="btn btn-sm btn-outline-secondary fw-bold">
+              <i class="fa-solid fa-plus me-1"></i> Adicionar Horário
+            </button>
+          </div>
+
+          {{ formset.management_form }}
+
+          <div class="table-responsive border rounded">
+            <table class="table table-hover align-middle mb-0">
+              <thead class="table-dark">
+                <tr class="text-uppercase small">
+                  <th scope="col" style="width: 20%;" class="ps-3">Ordem</th>
+                  <th scope="col" style="width: 50%;">Rótulo (ex: 07:00-08:00)</th>
+                  <th scope="col" style="width: 15%;" class="text-center">Hora Extra</th>
+                  <th scope="col" style="width: 15%;" class="text-end pe-3">Remover</th>
+                </tr>
+              </thead>
+              <tbody id="intervalos-body">
+                {% for form_item in formset %}
+                  <tr class="linha-intervalo">
+                    {% for hidden in form_item.hidden_fields %}{{ hidden }}{% endfor %}
+                    <td class="ps-3">{{ form_item.ordem }}</td>
+                    <td>{{ form_item.rotulo }}</td>
+                    <td class="text-center">
+                      <div class="d-flex justify-content-center">
+                        {{ form_item.e_extra }}
+                      </div>
+                    </td>
+                    <td class="text-end pe-3">
+                      {% if formset.can_delete %}
+                        <div class="d-none">{{ form_item.DELETE }}</div>
+                        <button type="button" class="btn btn-sm btn-outline-danger btn-remover-linha" title="Excluir Linha">
+                          <i class="fa-solid fa-trash"></i>
+                        </button>
+                      {% endif %}
+                    </td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {# ===== AÇÕES ===== #}
+        <div class="d-flex gap-2">
+          <button type="submit" class="btn btn-signal w-100 py-2 fw-bold">
+            <i class="fa-solid fa-check me-1"></i> Salvar Grade
+          </button>
+          <a href="{% url 'grade_horario_list' %}" class="btn btn-outline-secondary py-2 px-4">
+            Cancelar
+          </a>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+{# ===== TEMPLATE JS PARA NOVAS LINHAS ===== #}
+<template id="empty-form-template">
+  <tr class="linha-intervalo">
+    {% for hidden in formset.empty_form.hidden_fields %}{{ hidden }}{% endfor %}
+    <td class="ps-3">{{ formset.empty_form.ordem }}</td>
+    <td>{{ formset.empty_form.rotulo }}</td>
+    <td class="text-center">
+      <div class="d-flex justify-content-center">
+        {{ formset.empty_form.e_extra }}
+      </div>
+    </td>
+    <td class="text-end pe-3">
+      <div class="d-none">{{ formset.empty_form.DELETE }}</div>
+      <button type="button" class="btn btn-sm btn-outline-danger btn-remover-linha" title="Excluir Linha">
+        <i class="fa-solid fa-trash"></i>
+      </button>
+    </td>
+  </tr>
+</template>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const totalFormsInput = document.querySelector('input[id$="-TOTAL_FORMS"]');
+    const tbody = document.getElementById('intervalos-body');
+    const btnAdd = document.getElementById('add-linha');
+    const emptyTemplate = document.getElementById('empty-form-template');
+
+    if (btnAdd && totalFormsInput) {
+        btnAdd.addEventListener('click', function () {
+            const formIdx = parseInt(totalFormsInput.value, 10);
+            let newRowHtml = emptyTemplate.innerHTML.replace(/__prefix__/g, formIdx);
+            tbody.insertAdjacentHTML('beforeend', newRowHtml);
+            totalFormsInput.value = formIdx + 1;
+
+            const newRow = tbody.lastElementChild;
+            const ordemInput = newRow.querySelector('input[name$="-ordem"]');
+            if (ordemInput) ordemInput.value = formIdx + 1;
+        });
+    }
+
+    if (tbody) {
+        tbody.addEventListener('click', function (e) {
+            const btnRemover = e.target.closest('.btn-remover-linha');
+            if (btnRemover) {
+                const row = btnRemover.closest('tr');
+                const deleteCheckbox = row.querySelector('input[type="checkbox"][name$="-DELETE"]');
+                if (deleteCheckbox) {
+                    deleteCheckbox.checked = true;
+                    row.style.display = 'none';
+                } else {
+                    row.remove();
+                }
+            }
+        });
+    }
+});
+</script>
+{% endblock %}

@@ -1,0 +1,111 @@
+{% extends 'core/base.html' %}
+
+{% block title %}Nova Ficha{% endblock %}
+{% block header_title %}Nova Ficha{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-lg-6">
+    <div class="card p-4 border-0 shadow-sm">
+      <h5 class="display-font mb-1 text-uppercase fw-bold">Criar Nova Ficha</h5>
+      <p class="text-secondary small mb-4">Selecione o operador e o tipo da ficha.</p>
+
+      <form method="post" id="formCriarFicha">
+        {% csrf_token %}
+
+        {# ===== SELEÇÃO DO TIPO ===== #}
+        <div class="mb-3">
+          <label class="form-label small text-uppercase mono text-secondary fw-semibold">Tipo da Ficha</label>
+          <div class="row g-3">
+            {% for radio in form.tipo %}
+              <div class="col-6">
+                <label class="tipo-ficha-card">
+                  {{ radio.tag }}
+                  <div class="tipo-ficha-content">
+                    {% if radio.data.value == 'padrao' %}
+                      <i class="fa-solid fa-file-lines fs-3 mb-2 text-secondary"></i>
+                      <div class="fw-semibold text-dark">Padrão</div>
+                      <div class="small text-muted">Baixa livre, hora em hora</div>
+                    {% else %}
+                      <i class="fa-solid fa-list-ol fs-3 mb-2 text-secondary"></i>
+                      <div class="fw-semibold text-dark">Numerada</div>
+                      <div class="small text-muted">Quantidade fixa definida</div>
+                    {% endif %}
+                  </div>
+                </label>
+              </div>
+            {% endfor %}
+          </div>
+          {% for error in form.tipo.errors %}
+            <div class="text-danger small mt-1">{{ error }}</div>
+          {% endfor %}
+        </div>
+
+        {# ===== SELEÇÃO DO OPERADOR ===== #}
+        <div class="mb-4">
+          <label class="form-label small text-uppercase mono text-secondary fw-semibold">Operador Responsável</label>
+          {{ form.operador }}
+          {% for error in form.operador.errors %}
+            <div class="text-danger small mt-1">{{ error }}</div>
+          {% endfor %}
+        </div>
+
+        {# ===== SELEÇÃO DA GRADE DE HORÁRIO ===== #}
+        <div class="mb-4">
+          <label class="form-label small text-uppercase mono text-secondary fw-semibold">Grade de Horário</label>
+          {{ form.grade_horario }}
+          {% for error in form.grade_horario.errors %}
+            <div class="text-danger small mt-1">{{ error }}</div>
+          {% endfor %}
+        </div>
+
+        <button type="submit" class="btn btn-signal w-100 py-2" id="btnCriarFicha">
+          <i class="fa-solid fa-plus me-1"></i> Criar ficha
+        </button>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+  .tipo-ficha-card {
+    position: relative;
+    display: block;
+    cursor: pointer;
+    margin: 0;
+  }
+  .tipo-ficha-card input[type="radio"] {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    margin: 0;
+    cursor: pointer;
+    z-index: 2;
+  }
+  .tipo-ficha-content {
+    border: 2px solid var(--steel-100);
+    border-radius: 6px;
+    padding: 1.25rem 1rem;
+    text-align: center;
+    transition: border-color .15s ease, background .15s ease;
+  }
+  .tipo-ficha-card input[type="radio"]:checked + .tipo-ficha-content {
+    border-color: var(--amber-500);
+    background: rgba(232, 98, 44, 0.06);
+  }
+  .tipo-ficha-card input[type="radio"]:checked + .tipo-ficha-content i {
+    color: var(--amber-500) !important;
+  }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  // Trava o botão assim que envia pra evitar duplo toque criando duas fichas
+  document.getElementById('formCriarFicha')?.addEventListener('submit', function () {
+    document.getElementById('btnCriarFicha').disabled = true;
+  });
+</script>
+{% endblock %}

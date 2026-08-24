@@ -1,0 +1,217 @@
+{% extends 'core/base.html' %}
+
+{% block title %}Painel do Administrador{% endblock %}
+{% block header_title %}Painel do Administrador{% endblock %}
+
+{% block content %}
+
+  {# ===== CARDS DE NÚMEROS ===== #}
+  <div class="row g-3 mb-4">
+    <div class="col-6 col-lg-3">
+      <div class="card stat-card p-3 h-100">
+        <div class="stat-label">Modelos ativos</div>
+        <div class="stat-value">{{ stats.modelos }}</div>
+      </div>
+    </div>
+    <div class="col-6 col-lg-3">
+      <div class="card stat-card p-3 h-100">
+        <div class="stat-label">Peças cadastradas</div>
+        <div class="stat-value">{{ stats.pecas }}</div>
+      </div>
+    </div>
+    <div class="col-6 col-lg-3">
+      <div class="card stat-card p-3 h-100">
+        <div class="stat-label">Fichas abertas hoje</div>
+        <div class="stat-value">{{ stats.fichas_hoje }}</div>
+      </div>
+    </div>
+    <div class="col-6 col-lg-3">
+      <div class="card stat-card p-3 h-100">
+        <div class="stat-label">Usuários ativos</div>
+        <div class="stat-value">{{ stats.usuarios }}</div>
+      </div>
+    </div>
+  </div>
+
+  {# ===== AÇÕES RÁPIDAS ===== #}
+  <div class="d-flex flex-wrap gap-2 mb-4">
+    <a href="{% url 'cadastro_modelo' %}" class="btn btn-graphite btn-sm"><i class="fa-solid fa-plus me-1"></i> Novo modelo</a>
+    <a href="{% url 'cadastro_peca' %}" class="btn btn-outline-secondary btn-sm"><i class="fa-solid fa-plus me-1"></i> Nova peça</a>
+    <a href="{% url 'registrar' %}" class="btn btn-outline-secondary btn-sm"><i class="fa-solid fa-plus me-1"></i> Novo usuário</a>
+  </div>
+
+  {# ===== TABELA DE FICHAS RECENTES ===== #}
+  <div class="card">
+    <div class="card-header bg-white border-bottom py-3">
+      <h6 class="mb-0 display-font">Fichas recentes</h6>
+    </div>
+    <div class="table-responsive">
+      <table class="table table-hover align-middle mb-0">
+        <thead class="table-light">
+          <tr class="small text-uppercase text-secondary">
+            <th>Ficha</th>
+            <th>Supervisor</th>
+            <th>Operador</th>
+            <th>Tipo</th>
+            <th>Itens/Peças</th>
+            <th>Criada em</th>
+            <th class="text-end">Ação</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for ficha in fichas_recentes %}
+            <tr>
+              <td class="mono">#{{ ficha.id }}</td>
+              <td>{{ ficha.usuario }}</td>
+              <td>{{ ficha.operador}}</td>
+              <td>
+                {% if ficha.tipo == 'numerada' %}
+                  <span class="badge-industrial-amber">Numerada</span>
+                {% else %}
+                  <span class="badge-industrial-steel">Padrão</span>
+                {% endif %}
+              </td>
+              <td>{{ ficha.total_modelos }} Mod · {{ ficha.total_pecas }} Peça{{ ficha.total_pecas|pluralize }}</td>
+              <td class="mono small text-secondary">{{ ficha.criado_em|date:"d/m/Y H:i" }}</td>
+
+              <td class="text-end">
+                <a href="{% url 'visualizar_ficha' ficha.id %}" class="btn btn-industrial-outline btn-sm px-2">
+                  <i class="fa-solid fa-eye me-1"></i>Ver
+                </a>
+              </td>
+            </tr>
+          {% empty %}
+            <tr>
+              <td colspan="6" class="text-center text-secondary py-4">
+                Nenhuma ficha criada ainda.
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% if fichas_recentes.has_other_pages %}
+        <div class="card-footer bg-white border-top d-flex justify-content-between align-items-center py-2">
+          <small class="mono text-muted" style="font-size: 0.75rem;">
+            EXIBINDO {{ fichas_recentes.start_index }}-{{ fichas_recentes.end_index }} DE {{ fichas_recentes.paginator.count }}
+          </small>
+          
+          <ul class="pagination pagination-sm mb-0">
+            {# Botão Anterior #}
+            {% if fichas_recentes.has_previous %}
+              <li class="page-item">
+                <a class="page-link text-dark" href="?page={{ fichas_recentes.previous_page_number }}">Anterior</a>
+              </li>
+            {% else %}
+              <li class="page-item disabled"><span class="page-link">Anterior</span></li>
+            {% endif %}
+
+            {# Páginas Numeradas #}
+            {% for num in fichas_recentes.paginator.page_range %}
+              {% if fichas_recentes.number == num %}
+                <li class="page-item active">
+                  <span class="page-link" style="background: var(--amber-500); border-color: var(--amber-500); color: var(--graphite-950); font-weight: bold;">
+                    {{ num }}
+                  </span>
+                </li>
+              {% elif num > fichas_recentes.number|add:'-3' and num < fichas_recentes.number|add:'3' %}
+                <li class="page-item">
+                  <a class="page-link text-dark" href="?page={{ num }}">{{ num }}</a>
+                </li>
+              {% endif %}
+            {% endfor %}
+
+            {# Botão Próximo #}
+            {% if fichas_recentes.has_next %}
+              <li class="page-item">
+                <a class="page-link text-dark" href="?page={{ fichas_recentes.next_page_number }}">Próximo</a>
+              </li>
+            {% else %}
+              <li class="page-item disabled"><span class="page-link">Próximo</span></li>
+            {% endif %}
+          </ul>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+{% endblock %}
+{% block extra_css %}
+<style>
+  /* Ajustes específicos do estilo industrial para tabelas e métricas */
+  .table-industrial {
+    border-color: var(--steel-100);
+  }
+  
+  .table-industrial thead th {
+    font-family: var(--font-display);
+    font-size: 0.78rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    background: var(--graphite-950);
+    color: var(--steel-300);
+    border-bottom: 2px solid var(--amber-500);
+    padding: 0.75rem 1rem;
+  }
+
+  .table-industrial tbody td {
+    padding: 0.85rem 1rem;
+    vertical-align: middle;
+    border-bottom: 1px solid var(--steel-100);
+  }
+
+  .badge-industrial-amber {
+    background: var(--amber-500);
+    color: var(--graphite-950);
+    font-family: var(--font-mono);
+    font-weight: 600;
+    font-size: 0.7rem;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    padding: 0.3em 0.6em;
+    border-radius: 2px;
+  }
+
+  .badge-industrial-steel {
+    background: var(--graphite-800);
+    color: var(--steel-300);
+    font-family: var(--font-mono);
+    font-weight: 600;
+    font-size: 0.7rem;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    padding: 0.3em 0.6em;
+    border-radius: 2px;
+  }
+
+  .progress-industrial {
+    height: 6px;
+    background-color: var(--steel-100);
+    border-radius: 0;
+    overflow: hidden;
+  }
+
+  .progress-industrial .progress-bar-amber {
+    background-color: var(--amber-500);
+  }
+
+  .progress-industrial .progress-bar-ok {
+    background-color: var(--ok-500);
+  }
+
+  .btn-industrial-outline {
+    background: transparent;
+    color: var(--steel-300, #6c757d);
+    border: 1px solid var(--steel-100, #e0e6ed);
+    font-family: var(--font-mono);
+    font-weight: 600;
+    font-size: 0.78rem;
+    letter-spacing: 0.03em;
+    transition: all 0.2s ease-in-out;
+  }
+
+.btn-industrial-outline:hover {
+  background: var(--graphite-950, #1a1d20);
+  color: #ffffff;
+  border-color: var(--graphite-950, #1a1d20);
+}
+</style>
+{% endblock %}
