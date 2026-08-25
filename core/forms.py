@@ -44,6 +44,10 @@ class SetorForm(forms.ModelForm):
             'nome': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ex: Pesponto, Corte, Montagem'}),
         }
 
+        def clean_nome(self):
+            nome = self.cleaned_data.get('nome')
+            return nome.upper() if nome else nome
+
 class OperadorForm(forms.ModelForm):
     class Meta:
         model = Operador
@@ -53,6 +57,10 @@ class OperadorForm(forms.ModelForm):
             'setor': forms.Select(attrs={'class': 'form-select'}),
             'ativo': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
         }
+        
+    def clean_nome(self):
+        nome = self.cleaned_data.get('nome')
+        return nome.upper() if nome else nome
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -105,7 +113,11 @@ class PecaForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         # só modelos ativos aparecem pra vincular peça nova
         self.fields['modelo'].queryset = Modelo.objects.filter(ativo=True)
- 
+
+    def clean_nome(self):
+        nome = self.cleaned_data.get('nome')
+        return nome.upper() if nome else nome
+    
     def clean(self):
         cleaned_data = super().clean()
         modelo = cleaned_data.get('modelo')
