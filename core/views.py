@@ -227,6 +227,63 @@ def listar_operadores(request):
         'setor_selecionado': int(setor_id) if setor_id and setor_id.isdigit() else None,
     })
 
+@login_required
+def alterar_status_operador(request, operador_id):
+  if not request.user.is_admin:
+    messages.error(request, "Ação não permitida.")
+    return redirect("listar_operadores")
+
+  operador = get_object_or_404(Operador, pk=operador_id)
+
+  # Regra de Segurança: Verifica se há registros/fichas apontados para este operador
+  # Supondo que a relação se chame 'apontamento_set' ou 'ficha_set' (ajuste o nome da relação se necessário)
+  tem_apontamentos = (
+      hasattr(operador, "apontamento_set") and operador.apontamento_set.exists()
+  )
+
+  if tem_apontamentos:
+    messages.error(
+        request,
+        f"O operador '{operador.nome}' não pode ser alterado pois já possui"
+        " apontamentos de produção registrados.",
+    )
+  else:
+    operador.ativo = not operador.ativo
+    operador.save()
+    status_txt = "ativado" if operador.ativo else "desativado"
+    messages.success(
+        request, f"Operador '{operador.nome}' {status_txt} com sucesso."
+    )
+
+  return redirect("listar_operadores")
+
+
+@login_required
+def excluir_operador(request, operador_id):
+  if not request.user.is_admin:
+    messages.error(request, "Ação não permitida.")
+    return redirect("listar_operadores")
+
+  operador = get_object_or_404(Operador, pk=operador_id)
+
+  # Regra de Segurança: Impede exclusão caso haja histórico de produção
+  tem_apontamentos = (
+      hasattr(operador, "apontamento_set") and operador.apontamento_set.exists()
+  )
+
+  if tem_apontamentos:
+    messages.error(
+        request,
+        f"O operador '{operador.nome}' não pode ser excluído pois possui"
+        " histórico no sistema.",
+    )
+  else:
+    operador.delete()
+    messages.success(
+        request, f"Operador '{operador.nome}' excluído com sucesso."
+    )
+
+  return redirect("listar_operadores")
 # ==================== MODELOS E PEÇAS ====================
 
 @login_required

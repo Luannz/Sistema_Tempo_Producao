@@ -15,6 +15,8 @@ urlpatterns = [
     # ================= SETORES E OPERADORES ==================
     path('setores/', views.listar_setores, name='listar_setores'),
     path('operadores/', views.listar_operadores, name='listar_operadores'),
+    path('operadores/<int:operador_id>/status/',views.alterar_status_operador,name='alterar_status_operador'),
+    path('operadores/<int:operador_id>/excluir/',views.excluir_operador,name='excluir_operador'),
 
     # ==================== MODELOS E PECAS ====================
     path('modelos/cadastro/', views.cadastro_modelo, name='cadastro_modelo'),
