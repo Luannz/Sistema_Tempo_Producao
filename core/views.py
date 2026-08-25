@@ -230,29 +230,39 @@ def listar_operadores(request):
 
 @login_required
 def cadastro_modelo(request):
-    if not request.user.is_admin:
-        messages.error(request, "Apenas administradores podem gerenciar modelos.")
-        return redirect('inicio_supervisor')
+  if not request.user.is_admin:
+    messages.error(
+        request, "Apenas administradores podem gerenciar modelos."
+    )
+    return redirect("inicio_supervisor")
 
-    if request.method == 'POST':
-        form = ModeloForm(request.POST)
-        if form.is_valid():
-            form.save()
-            messages.success(request, "Modelo cadastrado com sucesso.")
-            return redirect('cadastro_modelo')
-    else:
-        form = ModeloForm()
+  if request.method == "POST":
+    form = ModeloForm(request.POST)
+    if form.is_valid():
+      form.save()
+      messages.success(request, "Modelo cadastrado com sucesso.")
+      return redirect("cadastro_modelo")
+  else:
+    form = ModeloForm()
 
-    # Contamos o total de itens de ficha vinculados ao modelo via 'itemficha'
-    # Se você quiser saber quantas FICHAS DISTINTAS usam este modelo, usaria: Count('itemficha__ficha', distinct=True)
-    modelos = Modelo.objects.annotate(
-        total_usos=Count('itemficha')
-    ).order_by('-criado_em')
+  # Ordena pelo campo 'numero'
+  modelos_list = Modelo.objects.annotate(
+      total_usos=Count("itemficha")
+  ).order_by("numero")
 
-    return render(request, 'core/cadastro_modelo.html', {
-        'form': form,
-        'modelos': modelos,
-    })
+  # Paginação: exibe 15 modelos por página (ajuste conforme preferir)
+  paginator = Paginator(modelos_list, 15)
+  page_number = request.GET.get("page")
+  modelos = paginator.get_page(page_number)
+
+  return render(
+      request,
+      "core/cadastro_modelo.html",
+      {
+          "form": form,
+          "modelos": modelos,
+      },
+  )
 
 @login_required
 def alterar_status_modelo(request, modelo_id):

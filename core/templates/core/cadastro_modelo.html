@@ -176,6 +176,47 @@
           </tbody>
         </table>
       </div>
+      <!-- Controles de Paginação com Bootstrap -->
+      {% if modelos.has_other_pages %}
+        <nav aria-label="Navegação de páginas" class="mt-4">
+          <ul class="pagination justify-content-center">
+
+            {% if modelos.has_previous %}
+              <li class="page-item">
+                <a class="page-link" href="?page={{ modelos.previous_page_number }}">Anterior</a>
+              </li>
+            {% else %}
+              <li class="page-item disabled">
+                <span class="page-link">Anterior</span>
+              </li>
+            {% endif %}
+
+            {% for num in modelos.paginator.page_range %}
+              {% if modelos.number == num %}
+                <li class="page-item active">
+                  <span class="page-link">{{ num }}</span>
+                </li>
+              {% else %}
+                <li class="page-item">
+                  <a class="page-link" href="?page={{ num }}">{{ num }}</a>
+                </li>
+              {% endif %}
+            {% endfor %}
+
+            {% if modelos.has_next %}
+              <li class="page-item">
+                <a class="page-link" href="?page={{ modelos.next_page_number }}">Próximo</a>
+              </li>
+            {% else %}
+              <li class="page-item disabled">
+                <span class="page-link">Próximo</span>
+              </li>
+            {% endif %}
+
+          </ul>
+        </nav>
+      {% endif %}
+
     </div>
   </div>
 
