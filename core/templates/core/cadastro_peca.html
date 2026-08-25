@@ -188,32 +188,32 @@
         </table>
       </div>
       {# ===== PAGINAÇÃO INDUSTRIAL ===== #}
-      {% if modelos.has_other_pages %}
+      {% if pecas.has_other_pages %}
         <div class="card-footer bg-white border-top d-flex justify-content-between align-items-center py-2">
           <small class="mono text-muted" style="font-size: 0.75rem;">
-            EXIBINDO {{ modelos.start_index }}-{{ modelos.end_index }} DE {{ modelos.paginator.count }}
+            EXIBINDO {{ pecas.start_index }}-{{ pecas.end_index }} DE {{ pecas.paginator.count }}
           </small>
           
           <ul class="pagination pagination-sm mb-0">
-            {% if modelos.has_previous %}
+            {% if pecas.has_previous %}
               <li class="page-item">
-                <a class="page-link text-dark" href="?page={{ modelos.previous_page_number }}">Anterior</a>
+                <a class="page-link text-dark" href="?page={{ pecas.previous_page_number }}">Anterior</a>
               </li>
             {% else %}
               <li class="page-item disabled"><span class="page-link">Anterior</span></li>
             {% endif %}
 
-            {% for num in modelos.paginator.page_range %}
-              {% if modelos.number == num %}
+            {% for num in pecas.paginator.page_range %}
+              {% if pecas.number == num %}
                 <li class="page-item active"><span class="page-link" style="background: var(--amber-500); border-color: var(--amber-500); color: var(--graphite-950); fw-bold;">{{ num }}</span></li>
-              {% elif num > modelos.number|add:'-3' and num < modelos.number|add:'3' %}
+              {% elif num > pecas.number|add:'-3' and num < pecas.number|add:'3' %}
                 <li class="page-item"><a class="page-link text-dark" href="?page={{ num }}">{{ num }}</a></li>
               {% endif %}
             {% endfor %}
 
-            {% if modelos.has_next %}
+            {% if pecas.has_next %}
               <li class="page-item">
-                <a class="page-link text-dark" href="?page={{ modelos.next_page_number }}">Próximo</a>
+                <a class="page-link text-dark" href="?page={{ pecas.next_page_number }}">Próximo</a>
               </li>
             {% else %}
               <li class="page-item disabled"><span class="page-link">Próximo</span></li>
