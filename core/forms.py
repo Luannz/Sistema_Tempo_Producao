@@ -44,9 +44,9 @@ class SetorForm(forms.ModelForm):
             'nome': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ex: Pesponto, Corte, Montagem'}),
         }
 
-        def clean_nome(self):
-            nome = self.cleaned_data.get('nome')
-            return nome.upper() if nome else nome
+    def clean_nome(self):
+        nome = self.cleaned_data.get('nome')
+        return nome.upper() if nome else nome
 
 class OperadorForm(forms.ModelForm):
     class Meta:
@@ -57,7 +57,7 @@ class OperadorForm(forms.ModelForm):
             'setor': forms.Select(attrs={'class': 'form-select'}),
             'ativo': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
         }
-        
+
     def clean_nome(self):
         nome = self.cleaned_data.get('nome')
         return nome.upper() if nome else nome
