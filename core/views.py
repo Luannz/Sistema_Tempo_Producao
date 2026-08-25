@@ -393,7 +393,7 @@ def cadastro_peca(request):
     pecas = paginator.get_page(page_number)
 
     # Dicionário com limite de tempo por modelo para o JS
-    modelos = Modelo.objects.filter(ativo=True).order_by("numero")
+    modelos = (Modelo.objects.filter(ativo=True).annotate(tamanho_numero=Length("numero")).order_by("tamanho_numero", "numero"))
     tempos_por_modelo = {m.id: str(m.tempo_fabricacao) for m in modelos}
 
     return render(
