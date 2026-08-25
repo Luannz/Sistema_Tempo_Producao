@@ -2,6 +2,7 @@
 from django import forms
 from .models import Usuario, Modelo, Peca, Ficha, ItemFicha, RegistroProducao, ItemFichaPeca, Setor, Operador, GradeHorario, IntervaloHorario
 from django.contrib.auth.forms import UserCreationForm
+from django.db.models.functions import Length
 from django.forms import inlineformset_factory
 
 
@@ -112,7 +113,7 @@ class PecaForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         # só modelos ativos aparecem pra vincular peça nova
-        self.fields['modelo'].queryset = Modelo.objects.filter(ativo=True)
+        self.fields['modelo'].queryset = Modelo.objects.filter(ativo=True).annotate(tamanho_numero=Length('numero')).order_by('tamanho_numero', 'numero')
 
     def clean_nome(self):
         nome = self.cleaned_data.get('nome')
