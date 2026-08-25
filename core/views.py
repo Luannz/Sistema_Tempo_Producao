@@ -14,6 +14,7 @@ from .forms import RegistroUsuarioForm, ModeloForm, PecaForm, FichaForm, ItemFic
 from datetime import datetime, timedelta
 from django.views.decorators.http import require_POST
 from decimal import Decimal
+from django.db.models.functions import Length
 import os
 import json
 
@@ -230,39 +231,39 @@ def listar_operadores(request):
 
 @login_required
 def cadastro_modelo(request):
-  if not request.user.is_admin:
-    messages.error(
-        request, "Apenas administradores podem gerenciar modelos."
+    if not request.user.is_admin:
+        messages.error(
+            request, "Apenas administradores podem gerenciar modelos."
+        )
+        return redirect("inicio_supervisor")
+
+    if request.method == "POST":
+        form = ModeloForm(request.POST)
+        if form.is_valid():
+            form.save()
+            messages.success(request, "Modelo cadastrado com sucesso.")
+            return redirect("cadastro_modelo")
+    else:
+        form = ModeloForm()
+
+    # Ordena pelo campo 'numero'
+    modelos_list = Modelo.objects.annotate(
+        total_usos=Count('itemficha'), tamanho_numero=Length('numero')
+        ).order_by('tamanho_numero', 'numero')
+
+    # Paginação: exibe 15 modelos por página (ajuste conforme preferir)
+    paginator = Paginator(modelos_list, 15)
+    page_number = request.GET.get("page")
+    modelos = paginator.get_page(page_number)
+
+    return render(
+        request,
+        "core/cadastro_modelo.html",
+        {
+            "form": form,
+            "modelos": modelos,
+        },
     )
-    return redirect("inicio_supervisor")
-
-  if request.method == "POST":
-    form = ModeloForm(request.POST)
-    if form.is_valid():
-      form.save()
-      messages.success(request, "Modelo cadastrado com sucesso.")
-      return redirect("cadastro_modelo")
-  else:
-    form = ModeloForm()
-
-  # Ordena pelo campo 'numero'
-  modelos_list = Modelo.objects.annotate(
-      total_usos=Count("itemficha")
-  ).order_by("numero")
-
-  # Paginação: exibe 15 modelos por página (ajuste conforme preferir)
-  paginator = Paginator(modelos_list, 15)
-  page_number = request.GET.get("page")
-  modelos = paginator.get_page(page_number)
-
-  return render(
-      request,
-      "core/cadastro_modelo.html",
-      {
-          "form": form,
-          "modelos": modelos,
-      },
-  )
 
 @login_required
 def alterar_status_modelo(request, modelo_id):
