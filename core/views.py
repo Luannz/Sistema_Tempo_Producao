@@ -362,44 +362,51 @@ def excluir_modelo(request, modelo_id):
  
 @login_required
 def cadastro_peca(request):
-  if not request.user.is_admin:
-    messages.error(request, "Apenas administradores podem gerenciar peças.")
-    return redirect("inicio_supervisor")
+    if not request.user.is_admin:
+        messages.error(request, "Apenas administradores podem gerenciar peças.")
+        return redirect("inicio_supervisor")
 
-  if request.method == "POST":
-    form = PecaForm(request.POST)
-    if form.is_valid():
-      form.save()
-      messages.success(request, "Peça cadastrada com sucesso.")
-      return redirect("cadastro_peca")
-  else:
-    form = PecaForm()
+    if request.method == "POST":
+        form = PecaForm(request.POST)
+        if form.is_valid():
+            form.save()
+            messages.success(request, "Peça cadastrada com sucesso.")
+            return redirect("cadastro_peca")
+    else:
+        form = PecaForm()
 
-  # Busca todas as peças ordenadas
-  pecas_list = (
-      Peca.objects.select_related("modelo")
-      .annotate(total_usos=Count("habilitacoes"))
-      .order_by("-id")
-  )
+    # Captura o modelo selecionado no filtro
+    modelo_id = request.GET.get("modelo")
 
-  # Paginação simples com get_page
-  paginator = Paginator(pecas_list, 15)
-  page_number = request.GET.get("page")
-  pecas = paginator.get_page(page_number)
+    # Busca todas as peças ordenadas
+    pecas_list = Peca.objects.select_related("modelo").annotate(
+        total_usos=Count("habilitacoes")
+    )
 
-  # Dicionário com limite de tempo por modelo para o JS
-  modelos = Modelo.objects.filter(ativo=True)
-  tempos_por_modelo = {m.id: str(m.tempo_fabricacao) for m in modelos}
+    # Aplica o filtro de modelo se informado
+    if modelo_id:
+        pecas_list = pecas_list.filter(modelo_id=modelo_id)
 
-  return render(
-      request,
-      "core/cadastro_peca.html",
-      {
-          "form": form,
-          "pecas": pecas,
-          "tempos_por_modelo": tempos_por_modelo,
-      },
-  )
+    # Paginação simples com get_page
+    paginator = Paginator(pecas_list, 15)
+    page_number = request.GET.get("page")
+    pecas = paginator.get_page(page_number)
+
+    # Dicionário com limite de tempo por modelo para o JS
+    modelos = Modelo.objects.filter(ativo=True).order_by("numero")
+    tempos_por_modelo = {m.id: str(m.tempo_fabricacao) for m in modelos}
+
+    return render(
+        request,
+        "core/cadastro_peca.html",
+        {
+            "form": form,
+            "pecas": pecas,
+            "modelos": modelos,
+            "modelo_selecionado": int(modelo_id) if modelo_id else None,
+            "tempos_por_modelo": tempos_por_modelo,
+        },
+    )
 
 @login_required
 def alterar_status_peca(request, peca_id):

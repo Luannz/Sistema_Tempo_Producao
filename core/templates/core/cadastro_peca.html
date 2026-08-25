@@ -71,6 +71,29 @@
         </span>
       </div>
 
+      <div class="card-header bg-white border-bottom py-3 d-flex justify-content-between align-items-center flex-wrap gap-2">
+        <div class="d-flex align-items-center gap-2">
+          <h5 class="mb-0 display-font fw-bold text-uppercase text-dark" style="letter-spacing: 0.05em;">
+            Peças Cadastradas
+          </h5>
+          <span class="badge-industrial-steel">
+            {{ pecas.paginator.count }} peça{{ pecas.paginator.count|pluralize:"s" }}
+          </span>
+        </div>
+
+        {# FILTRO POR MODELO #}
+        <form method="get" class="d-flex gap-2">
+          <select name="modelo" class="form-select form-select-sm mono" style="min-width: 170px;" onchange="this.form.submit()">
+            <option value="">Todos os Modelos</option>
+            {% for m in modelos %}
+              <option value="{{ m.id }}" {% if modelo_selecionado == m.id %}selected{% endif %}>
+                Modelo {{ m.numero }}
+              </option>
+            {% endfor %}
+          </select>
+        </form>
+      </div>
+
       <div class="table-responsive">
         <table class="table table-industrial table-hover mb-0">
           <thead>
@@ -197,7 +220,7 @@
           <ul class="pagination pagination-sm mb-0">
             {% if pecas.has_previous %}
               <li class="page-item">
-                <a class="page-link text-dark" href="?page={{ pecas.previous_page_number }}">Anterior</a>
+                <a class="page-link text-dark" href="?page={{ pecas.previous_page_number }}{% if modelo_selecionado %}&modelo={{ modelo_selecionado }}{% endif %}">Anterior</a>
               </li>
             {% else %}
               <li class="page-item disabled"><span class="page-link">Anterior</span></li>
@@ -205,15 +228,19 @@
 
             {% for num in pecas.paginator.page_range %}
               {% if pecas.number == num %}
-                <li class="page-item active"><span class="page-link" style="background: var(--amber-500); border-color: var(--amber-500); color: var(--graphite-950); fw-bold;">{{ num }}</span></li>
+                <li class="page-item active">
+                  <span class="page-link" style="background: var(--amber-500); border-color: var(--amber-500); color: var(--graphite-950); font-weight: bold;">{{ num }}</span>
+                </li>
               {% elif num > pecas.number|add:'-3' and num < pecas.number|add:'3' %}
-                <li class="page-item"><a class="page-link text-dark" href="?page={{ num }}">{{ num }}</a></li>
+                <li class="page-item">
+                  <a class="page-link text-dark" href="?page={{ num }}{% if modelo_selecionado %}&modelo={{ modelo_selecionado }}{% endif %}">{{ num }}</a>
+                </li>
               {% endif %}
             {% endfor %}
 
             {% if pecas.has_next %}
               <li class="page-item">
-                <a class="page-link text-dark" href="?page={{ pecas.next_page_number }}">Próximo</a>
+                <a class="page-link text-dark" href="?page={{ pecas.next_page_number }}{% if modelo_selecionado %}&modelo={{ modelo_selecionado }}{% endif %}">Próximo</a>
               </li>
             {% else %}
               <li class="page-item disabled"><span class="page-link">Próximo</span></li>
