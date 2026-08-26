@@ -187,7 +187,7 @@ class ItemFichaForm(forms.ModelForm):
         labels = {
             'modelo': 'Modelo',
             'numeracao': 'Numeração (Tamanho)',
-            'quantidade_planejada': 'Quantidade a produzir (pares)',
+            'quantidade_planejada': 'Quantidade a produzir',
         }
         widgets = {
             'modelo': forms.Select(attrs={'class': 'form-select'}),

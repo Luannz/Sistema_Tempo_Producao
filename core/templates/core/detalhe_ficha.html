@@ -223,7 +223,7 @@
                 {% if ficha.tipo == 'numerada' %}
                   <th class="text-start">Meta Planejada</th>
                 {% endif %}
-                <th>Pares/H</th>
+                <th>Prod/H</th>
                 <th>Perda</th>
                 <th>Produzido</th>
                 <th>Diferença.T</th>
@@ -247,7 +247,7 @@
                     <td class="fw-medium text-muted text-start mono">{{ reg.qtd_planejada|default:"—" }}</td>
                   {% endif %}
 
-                  <td class="fw-medium text-dark mono">{{ reg.meta_padrao }} <small class="text-muted">prs/h</small></td>
+                  <td class="fw-medium text-dark mono">{{ reg.meta_padrao }} <small class="text-muted">bat/h</small></td>
                   
                   <!-- Coluna Perda -->
                   <td class="fw-bold fs-6 mono {% if reg.quantidade_perda > 0 %}text-danger{% else %}text-muted{% endif %}">
@@ -321,16 +321,16 @@
                   {{ linha.modelo.numero }} <span class="text-secondary fw-normal">· Nº {{ linha.item.numeracao }}</span>
                 </div>
                 <div class="text-muted small mono mt-1">
-                  Meta: <strong>{{ linha.meta_hora }}</strong> pares/h
+                  Meta: <strong>{{ linha.meta_hora }}</strong> Batidas/h
                   {% if ficha.tipo == 'numerada' and linha.item.quantidade_planejada %}
-                    <br><span class="text-secondary">Planejado: <strong class="text-dark">{{ linha.item.quantidade_planejada }}</strong> pares</span>
-                    <br><span class="text-secondary">Produzido: <strong class="text-dark">{{ linha.total_produzido }}</strong> pares</span> 
+                    <br><span class="text-secondary">Planejado: <strong class="text-dark">{{ linha.item.quantidade_planejada }}</strong> Bat</span>
+                    <br><span class="text-secondary">Produzido: <strong class="text-dark">{{ linha.total_produzido }}</strong> Bat</span> 
                   {% else %}
-                    <br><span class="text-secondary">Produzido: <strong class="text-dark">{{ linha.total_produzido }}</strong> pares</span> 
+                    <br><span class="text-secondary">Produzido: <strong class="text-dark">{{ linha.total_produzido }}</strong> Bat</span> 
                   {% endif %}
 
                   {% if linha.total_perda > 0 %}
-                    <br><span class="text-danger">Perda: <strong class="text-dark">{{ linha.total_perda }}</strong> pares</span>
+                    <br><span class="text-danger">Perda: <strong class="text-dark">{{ linha.total_perda }}</strong> Bat</span>
                   {% endif %}
                 </div>
               </div>
@@ -345,16 +345,16 @@
                   {% for peca_hab in linha.pecas_habilitadas %}
                     <span class="badge bg-white text-dark border fw-normal">
                       <i class="fa-solid fa-check me-1" style="color: var(--ok-500);"></i>
-                      {{ peca_hab.peca.nome }}
+                      <strong class="text-dark">{{ peca_hab.peca.nome }}</strong>
                       {% if ficha.tipo == 'numerada' %}
                         {# Ficha Numerada: exibe Produzido / Planejado #}
-                        Produzido: <strong class="text-dark">{{ peca_hab.total_produzido }}</strong> / {{ peca_hab.quantidade_planejada|default:"-" }} Pares
+                        Produzido: <strong class="text-dark">{{ peca_hab.total_produzido }}</strong> / {{ peca_hab.quantidade_planejada|default:"-" }} Bat
                         {% if peca_hab.total_perda > 0 %}
                           <span class="text-danger">/ Perda: <strong class="text-dark">{{ peca_hab.total_perda }}</strong></span>
                         {% endif %}
                       {% else %}
                         {# Ficha Padrão: exibe apenas o Produzido #}
-                        Produzido: <strong class="text-dark">{{ peca_hab.total_produzido }}</strong> Pares 
+                        Produzido: <strong class="text-dark">{{ peca_hab.total_produzido }}</strong> Bat 
                         {% if peca_hab.total_perda > 0 %}
                           <span class="text-danger">/ Perda: <strong class="text-dark">{{ peca_hab.total_perda }}</strong></span>
                         {% endif %}
@@ -508,7 +508,7 @@
       return;
     }
     if (!qtd || qtd <= 0) {
-      previewTempoEl.textContent = `Meta base: ${(60 / tempoModelo).toFixed(1)} pares/hora.`;
+      previewTempoEl.textContent = `Meta base: ${(60 / tempoModelo).toFixed(1)} batida/hora.`;
       return;
     }
 
@@ -560,7 +560,7 @@
       rotuloContexto = `Meta da peça (${optSelecionada.text})`;
     } else {
       meta = parseFloat(metasPorItem[itemId]);
-      rotuloContexto = `Meta do modelo (Par completo)`;
+      rotuloContexto = `Meta do modelo`;
     }
 
     if (!meta || isNaN(meta)) {
@@ -573,18 +573,18 @@
 
     if (isNaN(produzido)) {
       previewMetaEl.className = "form-text mt-3 p-2.5 rounded bg-light border text-dark preview-box";
-      previewMetaEl.innerHTML = `<i class="fa-solid fa-bullseye me-1" style="color: var(--amber-500);"></i> ${rotuloContexto}: <strong>${meta}</strong> pares/hora.`;
+      previewMetaEl.innerHTML = `<i class="fa-solid fa-bullseye me-1" style="color: var(--amber-500);"></i> ${rotuloContexto}: <strong>${meta}</strong> bat/hora.`;
       return;
     }
 
     if (produzido >= meta) {
       const sobra = (produzido - meta).toFixed(1);
       previewMetaEl.className = "form-text mt-3 p-2.5 rounded badge-status-ok preview-box fw-semibold";
-      previewMetaEl.innerHTML = `<i class="fa-solid fa-circle-check me-1" style="color: var(--ok-500);"></i> ${rotuloContexto}: ${meta} pares/h — <strong>Dentro da meta!</strong> (+${sobra} pares)`;
+      previewMetaEl.innerHTML = `<i class="fa-solid fa-circle-check me-1" style="color: var(--ok-500);"></i> ${rotuloContexto}: ${meta} bat/h — <strong>Dentro da meta!</strong> (+${sobra} bat)`;
     } else {
       const falta = (meta - produzido).toFixed(1);
       previewMetaEl.className = "form-text mt-3 p-2.5 rounded badge-status-alert preview-box fw-semibold";
-      previewMetaEl.innerHTML = `<i class="fa-solid fa-triangle-exclamation me-1" style="color: var(--alert-500);"></i> ${rotuloContexto}: ${meta} pares/h — <strong>Abaixo da meta</strong> (Faltam ${falta} pares)`;
+      previewMetaEl.innerHTML = `<i class="fa-solid fa-triangle-exclamation me-1" style="color: var(--alert-500);"></i> ${rotuloContexto}: ${meta} bat/h — <strong>Abaixo da meta</strong> (Faltam ${falta} bat)`;
     }
   }
 

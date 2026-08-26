@@ -69,12 +69,11 @@ class Modelo(models.Model):
 
     @property
     def pares_por_hora(self):
-        """60 dividido pelo tempo de fabricação, arredondado com 3 casas."""
+        """(60 / tempo de fabricação) * 2, arredondado com 1 casa decimal."""
         if not self.tempo_fabricacao:
-            return Decimal('0')
-        return (Decimal('60') / self.tempo_fabricacao).quantize(
-            Decimal('0.0'), rounding=ROUND_HALF_UP
-        )
+            return Decimal("0")
+        resultado = (Decimal("60") / self.tempo_fabricacao) * Decimal("2")
+        return resultado.quantize(Decimal("0.0"), rounding=ROUND_HALF_UP)
 
 
 class Peca(models.Model):
@@ -102,11 +101,11 @@ class Peca(models.Model):
 
     @property
     def pares_por_hora(self):
+        """(60 / tempo de fabricação) * 2, arredondado com 1 casa decimal."""
         if not self.tempo_fabricacao:
-            return Decimal('0')
-        return (Decimal('60') / self.tempo_fabricacao).quantize(
-            Decimal('0.0'), rounding=ROUND_HALF_UP
-        )
+            return Decimal("0")
+        resultado = (Decimal("60") / self.tempo_fabricacao) * Decimal("2")
+        return resultado.quantize(Decimal("0.0"), rounding=ROUND_HALF_UP)
 
 
 class GradeHorario(models.Model):

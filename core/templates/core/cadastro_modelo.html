@@ -34,7 +34,7 @@
             {{ form.tempo_fabricacao.label }}
           </label>
           {{ form.tempo_fabricacao }}
-          <div class="form-text small mono text-muted mt-1">Pares/hora é calculado sozinho (60 ÷ tempo).</div>
+          <div class="form-text small mono text-muted mt-1">Prod/hora é calculado sozinho ((60 ÷ tempo) &times; 2).</div>
           {% for error in form.tempo_fabricacao.errors %}
             <div class="text-danger small mt-1 mono">{{ error }}</div>
           {% endfor %}
@@ -72,7 +72,7 @@
             <tr>
               <th style="width: 110px;">Número</th>
               <th>Tempo (min)</th>
-              <th>Pares/hora</th>
+              <th>Prod/hora</th>
               <th class="text-center" style="width: 110px;">Status</th>
               <th class="text-end" style="width: 120px;">Ações</th>
             </tr>
