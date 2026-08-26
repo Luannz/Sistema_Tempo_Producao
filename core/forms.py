@@ -209,7 +209,8 @@ class ItemFichaForm(forms.ModelForm):
         # model funcionar e pro unique_together (ficha, modelo) ser respeitado
         self.instance.ficha = ficha
  
-        self.fields['modelo'].queryset = Modelo.objects.filter(ativo=True)
+        self.fields['modelo'].queryset = Modelo.objects.filter(ativo=True).annotate(tamanho_numero=Length('numero')).order_by('tamanho_numero', 'numero')
+
  
         # ficha padrão não usa quantidade — nem mostra o campo
         if ficha and ficha.tipo == Ficha.Tipo.PADRAO:
