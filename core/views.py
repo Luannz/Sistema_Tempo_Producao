@@ -469,7 +469,27 @@ def criar_ficha(request):
         form = FichaForm(user=request.user)
 
     return render(request, 'core/criar_ficha.html', {'form': form})
- 
+
+
+@login_required
+@require_POST
+def excluir_ficha(request, ficha_id):
+  if not request.user.is_admin:
+    messages.error(request, "Apenas administradores podem excluir fichas.")
+    return redirect("inicio_supervisor")
+
+  ficha = get_object_or_404(Ficha, id=ficha_id)
+  num_ficha = ficha.id
+  ficha.delete()
+
+  messages.success(request, f"Ficha #{num_ficha} excluída com sucesso.")
+
+  # Redireciona para a página de onde veio ou para a lista de fichas
+  referer = request.META.get("HTTP_REFERER")
+  if referer:
+    return redirect(referer)
+  return redirect("inicio_supervisor")
+
 
 # os totais e informações de registro dos modelos são feitos na view, mas o resto, das peças, é puxado direto dos propertys no model
 @login_required

@@ -13,6 +13,7 @@
       <p class="text-secondary small mb-0">Listagem de fichas registradas e seus indicadores</p>
     </div>
   </div>
+  
   <div class="card shadow-sm border-0 mb-4">
     <div class="card-body p-3 bg-white rounded">
         <form method="get" action="{% url 'historico_fichas' %}" class="row g-2 align-items-end">
@@ -73,7 +74,7 @@
 
         </form>
     </div>
-    </div>
+  </div>
 
   <div class="card shadow-sm">
     <div class="table-responsive">
@@ -136,14 +137,62 @@
                 </td>
 
                 <td class="text-end">
-                    <a href="{% url 'visualizar_ficha' ficha.id %}" class="btn btn-sm btn-outline-secondary" title="Ver Detalhes">
-                    <i class="fa-solid fa-eye"></i>
-                    </a>
+                    <div class="btn-group btn-group-sm" role="group">
+                        <a href="{% url 'visualizar_ficha' ficha.id %}" class="btn btn-outline-secondary" title="Ver Detalhes">
+                            <i class="fa-solid fa-eye"></i>
+                        </a>
+
+                        {% if request.user.is_admin %}
+                        <button type="button" 
+                                class="btn btn-outline-danger" 
+                                data-bs-toggle="modal" 
+                                data-bs-target="#modalExcluirFicha{{ ficha.id }}"
+                                title="Excluir Ficha">
+                            <i class="fa-solid fa-trash"></i>
+                        </button>
+                        {% endif %}
+                    </div>
+
+                    <!-- Modal de Confirmação de Exclusão -->
+                    {% if request.user.is_admin %}
+                    <div class="modal fade" id="modalExcluirFicha{{ ficha.id }}" tabindex="-1" aria-hidden="true">
+                        <div class="modal-dialog modal-dialog-centered">
+                            <div class="modal-content border-0 shadow">
+                                <div class="modal-header bg-danger text-white py-2">
+                                    <h6 class="modal-title display-font fw-bold text-uppercase mb-0">
+                                        <i class="fa-solid fa-triangle-exclamation me-1"></i> Confirmar Exclusão
+                                    </h6>
+                                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                                </div>
+
+                                <div class="modal-body text-start py-3">
+                                    <p class="mb-2 text-dark fw-semibold">
+                                        Certeza que deseja excluir a <strong>Ficha #{{ ficha.id }}</strong>?
+                                    </p>
+                                    <p class="small text-secondary mb-0">
+                                        Esta ação excluirá permanentemente a ficha e todos os apontamentos de produção vinculados a ela.
+                                    </p>
+                                </div>
+
+                                <div class="modal-footer py-2 bg-light border-top">
+                                    <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+                                    
+                                    <form method="post" action="{% url 'excluir_ficha' ficha.id %}" class="d-inline">
+                                        {% csrf_token %}
+                                        <button type="submit" class="btn btn-sm btn-danger fw-semibold">
+                                            <i class="fa-solid fa-trash me-1"></i> Sim, Excluir Ficha
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
                 </td>
             </tr>
           {% empty %}
             <tr>
-              <td colspan="7" class="text-center py-5 text-muted">
+              <td colspan="8" class="text-center py-5 text-muted">
                 <i class="fa-solid fa-file-circle-xmark display-6 mb-3 d-block opacity-50"></i>
                 Nenhuma ficha encontrada no histórico.
               </td>
@@ -196,6 +245,7 @@
 
 </div>
 {% endblock %}
+
 {% block extra_css %}
 <style>
   .badge-industrial-amber {

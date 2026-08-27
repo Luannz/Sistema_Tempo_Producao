@@ -31,7 +31,8 @@ urlpatterns = [
     path('fichas/nova/', views.criar_ficha, name='criar_ficha'),
     path('fichas/<int:ficha_id>/', views.detalhe_ficha, name='detalhe_ficha'),
     path('fichas/<int:ficha_id>/visualizar/', views.visualizar_ficha, name='visualizar_ficha'),
-
+    path('fichas/<int:ficha_id>/excluir/',views.excluir_ficha,name='excluir_ficha'),
+    
     # ==================== HORARIOS ====================
     path('grades/', views.grade_horario_list, name='grade_horario_list'),
     path('grades/nova/', views.grade_horario_create, name='grade_horario_create'),
