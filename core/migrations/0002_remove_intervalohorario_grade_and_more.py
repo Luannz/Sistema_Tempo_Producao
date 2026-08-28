@@ -11,10 +11,6 @@ class Migration(migrations.Migration):
 
     operations = [
         migrations.RemoveField(
-            model_name='intervalohorario',
-            name='grade',
-        ),
-        migrations.RemoveField(
             model_name='ficha',
             name='grade_horario',
         ),
