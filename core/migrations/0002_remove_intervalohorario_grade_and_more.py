@@ -19,10 +19,6 @@ class Migration(migrations.Migration):
             name='grade_horario',
         ),
         migrations.AlterUniqueTogether(
-            name='intervalohorario',
-            unique_together=None,
-        ),
-        migrations.AlterUniqueTogether(
             name='registroproducao',
             unique_together=set(),
         ),
