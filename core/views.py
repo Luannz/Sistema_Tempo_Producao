@@ -9,8 +9,8 @@ from django.urls import reverse
 from django.http import JsonResponse
 from django.db import IntegrityError, transaction
 from django.db.models import Case, When, Value, IntegerField, Q , Max, F, Count, Sum
-from .models import Usuario, Modelo, Peca, Ficha, ItemFicha, RegistroProducao, ItemFichaPeca, Setor, Operador, GradeHorario
-from .forms import RegistroUsuarioForm, ModeloForm, PecaForm, FichaForm, ItemFichaForm, RegistroProducaoForm, ItemFichaPecaForm, SetorForm, OperadorForm, GradeHorarioForm, IntervaloHorarioFormSet
+from .models import Usuario, Modelo, Peca, Ficha, ItemFicha, RegistroProducao, ItemFichaPeca, Setor, Operador
+from .forms import RegistroUsuarioForm, ModeloForm, PecaForm, FichaForm, ItemFichaForm, RegistroProducaoForm, ItemFichaPecaForm, SetorForm, OperadorForm
 from datetime import datetime, timedelta
 from django.views.decorators.http import require_POST
 from decimal import Decimal
@@ -497,18 +497,16 @@ def detalhe_ficha(request, ficha_id):
     """
     Tela de TRABALHO do supervisor — focado em registro rápido de produção.
     """
-    # 1. Incluídos 'grade_horario__intervalos' e 'registros' nos prefetches
     ficha = get_object_or_404(
-        Ficha.objects
-        .select_related('usuario', 'grade_horario')
-        .prefetch_related(
-            'grade_horario__intervalos',
-            'itens__modelo__pecas',
-            'itens__pecas_habilitadas__peca',
-            'itens__registros'
-        ),
-        pk=ficha_id
-    )
+    Ficha.objects
+    .select_related('usuario')
+    .prefetch_related(
+        'itens__modelo__pecas',
+        'itens__pecas_habilitadas__peca',
+        'itens__registros'
+    ),
+    pk=ficha_id
+)
 
     if request.user.is_admin:
         return redirect('visualizar_ficha', ficha_id=ficha.id)
@@ -518,37 +516,7 @@ def detalhe_ficha(request, ficha_id):
         return redirect('inicio_supervisor')
 
     item_form = ItemFichaForm(ficha=ficha)
-
-    # 2. Mapeamento de próximos períodos por item/peça
-    proximos_periodos = {}
-    for item in ficha.itens.all():
-        # Período para o Modelo (item sem peça específica)
-        proximo_modelo = item.proximo_periodo()
-        if proximo_modelo:
-            proximos_periodos[str(item.id)] = {
-                'id': proximo_modelo.id,
-                'rotulo': str(proximo_modelo) # Ex: "07:00 - 08:00" ou campo de rótulo da grade
-            }
-
-        # Período para cada Peça habilitada do item
-        for hab in item.pecas_habilitadas.all():
-            proximo_peca = hab.proximo_periodo()
-            if proximo_peca:
-                chave_peca = f"{item.id}_{hab.peca_id}"
-                proximos_periodos[chave_peca] = {
-                    'id': proximo_peca.id,
-                    'rotulo': str(proximo_peca)
-                }
-
-    # 3. Define o período inicial do form baseado no primeiro item (se existir)
-    primeiro_item = ficha.itens.first()
-    periodo_inicial_obj = primeiro_item.proximo_periodo() if primeiro_item else None
-    periodo_inicial_id = periodo_inicial_obj.id if periodo_inicial_obj else None
-
-    registro_form = RegistroProducaoForm(
-        ficha=ficha, 
-        initial={'periodo': periodo_inicial_id} if periodo_inicial_id else None
-    )
+    registro_form = RegistroProducaoForm(ficha=ficha)
 
     if request.method == 'POST':
         acao = request.POST.get('acao')
@@ -632,7 +600,7 @@ def detalhe_ficha(request, ficha_id):
     ultimos_registros = (
         RegistroProducao.objects
         .filter(item_ficha__ficha=ficha)
-        .select_related('item_ficha__modelo', 'peca', 'periodo')
+        .select_related('item_ficha__modelo', 'peca')
         .order_by('-registrado_em')[:10]
     )
 
@@ -660,9 +628,7 @@ def detalhe_ficha(request, ficha_id):
         'tempos_por_modelo': tempos_por_modelo,
         'metas_por_item': metas_por_item,
         'pecas_por_item': pecas_por_item,
-        'proximos_periodos_json': json.dumps(proximos_periodos), # 4. Serializado para uso no JS
     })
-
 
 @login_required
 def visualizar_ficha(request, ficha_id):
@@ -671,7 +637,7 @@ def visualizar_ficha(request, ficha_id):
         .select_related('usuario', 'operador')
         .prefetch_related(
             'itens__modelo',
-            'itens__registros__periodo',
+            'itens__registros',
             'itens__pecas_habilitadas__peca'
         ),
         pk=ficha_id
@@ -690,14 +656,6 @@ def visualizar_ficha(request, ficha_id):
         produzido = sum(r.quantidade_produzida for r in registros_modelo)
         perda_modelo = sum(r.quantidade_perda for r in registros_modelo)
 
-        horas_modelo = len(registros_modelo)
-        meta_hora_modelo = item.modelo.pares_por_hora
-        meta_esperada_modelo = horas_modelo * meta_hora_modelo
-        na_meta_total_modelo = (produzido >= meta_esperada_modelo) if horas_modelo > 0 else None
-
-        horas_modelo_ok = sum(1 for r in registros_modelo if r.dentro_da_meta)
-        percentual_modelo = round(horas_modelo_ok / horas_modelo * 100) if horas_modelo else None
-
         # Ficha Numerada (Modelo)
         qtd_planejada = item.quantidade_planejada if eh_numerada else None
         qtd_restante = item.qtd_restante(produzido) if eh_numerada else None
@@ -705,25 +663,12 @@ def visualizar_ficha(request, ficha_id):
         tempo_restante_min = item.tempo_restante_minutos(produzido) if eh_numerada else None
         tempo_restante_formatado = item.tempo_restante_formatado(produzido) if eh_numerada else None
 
-        percentuais_card = [percentual_modelo] if percentual_modelo is not None else []
-
         # --- CÁLCULO DAS PEÇAS ---
         pecas_resumo = []
         for habilitacao in item.pecas_habilitadas.all():
             registros_peca = [r for r in item.registros.all() if r.peca_id == habilitacao.peca_id]
             produzido_peca = sum(r.quantidade_produzida for r in registros_peca)
             perda_peca = sum(r.quantidade_perda for r in registros_peca)
-
-            horas_peca = len(registros_peca)
-            meta_hora_peca = habilitacao.peca.pares_por_hora
-            meta_esperada_peca = horas_peca * meta_hora_peca
-            na_meta_total_peca = (produzido_peca >= meta_esperada_peca) if horas_peca > 0 else None
-
-            horas_peca_ok = sum(1 for r in registros_peca if r.dentro_da_meta)
-            percentual_peca = round(horas_peca_ok / horas_peca * 100) if horas_peca else None
-
-            if percentual_peca is not None:
-                percentuais_card.append(percentual_peca)
 
             qtd_planejada_peca = habilitacao.quantidade_planejada if eh_numerada else None
             qtd_restante_peca = habilitacao.qtd_restante(produzido_peca) if eh_numerada else None
@@ -735,14 +680,6 @@ def visualizar_ficha(request, ficha_id):
                 'peca': habilitacao.peca,
                 'produzido': produzido_peca,
                 'perda': perda_peca,
-                'meta_hora': meta_hora_peca,
-                'horas': horas_peca,
-                'meta_esperada': meta_esperada_peca,
-                'na_meta_total': na_meta_total_peca,
-                'percentual': percentual_peca,
-                'na_meta': percentual_peca is not None and percentual_peca >= 50,
-
-                # Dados de Ficha Numerada da Peça
                 'qtd_planejada': qtd_planejada_peca,
                 'qtd_restante': qtd_restante_peca,
                 'percentual_concluido': percentual_concluido_peca,
@@ -751,44 +688,46 @@ def visualizar_ficha(request, ficha_id):
                 'concluido': (qtd_restante_peca == 0) if eh_numerada else False,
             })
 
-        # Status Geral do Card
-        if percentuais_card:
-            media_geral = sum(percentuais_card) / len(percentuais_card)
-            status_card = 'ok' if media_geral >= 50 else 'alerta'
-        else:
-            status_card = 'sem_dados'
-
         itens_resumo.append({
             'item': item,
             'modelo': item.modelo,
             'produzido': produzido,
             'perda': perda_modelo,
-            'meta_hora': meta_hora_modelo,
-            'horas': horas_modelo,
-            'meta_esperada': meta_esperada_modelo,
-            'na_meta_total': na_meta_total_modelo,
-
-            # Ficha Numerada (Modelo)
             'qtd_planejada': qtd_planejada,
             'qtd_restante': qtd_restante,
             'percentual_concluido': percentual_concluido,
             'tempo_restante_min': tempo_restante_min,
             'tempo_restante_formatado': tempo_restante_formatado,
             'concluido': (qtd_restante == 0) if eh_numerada else False,
-
             'tempo_estimado_total': item.tempo_estimado_total,
-            'percentual_modelo': percentual_modelo,
             'pecas_resumo': pecas_resumo,
-            'status_card': status_card,
         })
 
-    # Registros para a tabela inferior do histórico
-    registros = (
+    # Registros ordenados pelo horário da baixa (do mais recente ao mais antigo)
+    registros_query = (
         RegistroProducao.objects
         .filter(item_ficha__ficha=ficha)
-        .select_related('item_ficha__modelo', 'peca', 'periodo')
-        .order_by('periodo__ordem', 'peca__nome')
+        .select_related('item_ficha__modelo', 'peca')
+        .order_by('-registrado_em')
     )
+
+    # Registros ordenados pelo horário da baixa
+    registros_query = (
+        RegistroProducao.objects
+        .filter(item_ficha__ficha=ficha)
+        .select_related('item_ficha__modelo', 'peca', 'item_ficha__ficha')
+        .order_by('-registrado_em')
+    )
+
+    registros = []
+    for reg in registros_query:
+        # Monta o rótulo do Item / Peça
+        if reg.peca:
+            reg.item_rotulo = f"{reg.item_ficha.modelo.numero} - {reg.peca.nome}"
+        else:
+            reg.item_rotulo = f"{reg.item_ficha.modelo.numero} (Nº{reg.item_ficha.numeracao})"
+
+        registros.append(reg)
 
     return render(request, 'core/visualizar_ficha.html', {
         'ficha': ficha,
@@ -855,6 +794,7 @@ def historico_fichas(request):
     })
 
 def historico_ficha_usuario(request, usuario_id):
+    
     usuario = get_object_or_404(Usuario, pk=usuario_id)
 
     # 1. Filtros recebidos por GET
@@ -910,65 +850,3 @@ def historico_ficha_usuario(request, usuario_id):
         'data_filtro': data_filtro,
         'tipo_filtro': tipo_filtro,
     })
-
-# ==================== HORÁRIOS ====================
-def grade_horario_list(request):
-    grades = GradeHorario.objects.prefetch_related('intervalos').all()
-    # Aponta para o template que MOSTRA a lista e os horários
-    return render(request, 'core/grade_horario_lista.html', {'grades': grades})
-
-def grade_horario_create(request):
-    if request.method == 'POST':
-        form = GradeHorarioForm(request.POST)
-        formset = IntervaloHorarioFormSet(request.POST)
-        if form.is_valid() and formset.is_valid():
-            grade = form.save()
-            formset.instance = grade
-            formset.save()
-            messages.success(request, 'Grade criada com sucesso!')
-            return redirect('grade_horario_list')
-    else:
-        form = GradeHorarioForm()
-        formset = IntervaloHorarioFormSet()
-
-    return render(request, 'core/cadastro_grades.html', {
-        'form': form,
-        'formset': formset,
-        'titulo': 'Criar Grade de Horário'
-    })
-
-def grade_horario_update(request, pk):
-    grade = get_object_or_404(GradeHorario, pk=pk)
-    if request.method == 'POST':
-        form = GradeHorarioForm(request.POST, instance=grade)
-        formset = IntervaloHorarioFormSet(request.POST, instance=grade)
-        if form.is_valid() and formset.is_valid():
-            form.save()
-            formset.save()
-            messages.success(request, 'Grade atualizada com sucesso!')
-            return redirect('grade_horario_list')
-    else:
-        form = GradeHorarioForm(instance=grade)
-        formset = IntervaloHorarioFormSet(instance=grade)
-
-    return render(request, 'core/cadastro_grades.html', {
-        'form': form,
-        'formset': formset,
-        'titulo': 'Editar Grade de Horário'
-    })
-
-def grade_horario_delete(request, pk):
-    grade = get_object_or_404(GradeHorario, pk=pk)
-
-    if request.method == 'POST':
-        # Verifica se existe alguma ficha associada a esta grade
-        if grade.fichas.exists():
-            messages.warning(
-                request,
-                'Não é possível excluir esta grade pois existem fichas de produção vinculadas a ela.',
-            )
-        else:
-            grade.delete()
-            messages.success(request, 'Grade excluída com sucesso!')
-
-    return redirect('grade_horario_list')

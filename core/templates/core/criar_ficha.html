@@ -50,15 +50,6 @@
           {% endfor %}
         </div>
 
-        {# ===== SELEÇÃO DA GRADE DE HORÁRIO ===== #}
-        <div class="mb-4">
-          <label class="form-label small text-uppercase mono text-secondary fw-semibold">Grade de Horário</label>
-          {{ form.grade_horario }}
-          {% for error in form.grade_horario.errors %}
-            <div class="text-danger small mt-1">{{ error }}</div>
-          {% endfor %}
-        </div>
-
         <button type="submit" class="btn btn-signal w-100 py-2" id="btnCriarFicha">
           <i class="fa-solid fa-plus me-1"></i> Criar ficha
         </button>

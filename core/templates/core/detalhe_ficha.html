@@ -113,7 +113,7 @@
         <h6 class="card-header-title mb-0">
           <i class="fa-solid fa-stopwatch me-2" style="color: var(--amber-500);"></i>Registrar Produção da Hora
         </h6>
-        <span class="badge bg-light text-secondary border mono" style="font-size: 0.7rem;">Apontamento</span>
+        <span class="badge bg-light text-secondary border mono" style="font-size: 0.7rem;">Apontamento Automático</span>
       </div>
 
       <div class="card-body p-4">
@@ -123,8 +123,8 @@
             <input type="hidden" name="acao" value="registrar_producao">
 
             <div class="row g-3">
-              <!-- Modelo (3 Colunas) -->
-              <div class="col-md-3">
+              <!-- Modelo (6 Colunas) -->
+              <div class="col-md-6">
                 <label class="form-label fw-semibold small text-uppercase text-secondary" for="{{ registro_form.item_ficha.id_for_label }}">
                   Modelo
                 </label>
@@ -134,8 +134,8 @@
                 {% endfor %}
               </div>
 
-              <!-- Peça (3 Colunas) -->
-              <div class="col-md-3">
+              <!-- Peça (6 Colunas) -->
+              <div class="col-md-6">
                 <label class="form-label fw-semibold small text-uppercase text-secondary text-nowrap" for="{{ registro_form.peca.id_for_label }}">
                   Peça (Opcional)
                 </label>
@@ -144,22 +144,9 @@
                   <div class="text-danger small mt-1">{{ error }}</div>
                 {% endfor %}
               </div>
-              
-              <!-- Campo para exibição visual do intervalo -->
-              <div class="mb-3">
-                <label class="form-label small text-uppercase mono text-secondary fw-semibold">Horário / Período</label>
-                <input type="text" id="display_periodo_atual" class="form-control" readonly placeholder="Selecione o modelo/peça...">
-                
-                <!-- Campo oculto real do Form Django (ID retornado por {{ registro_form.periodo.id_for_label }}) -->
-                <input type="hidden" name="periodo" id="{{ registro_form.periodo.id_for_label }}">
-                
-                {% for error in registro_form.periodo.errors %}
-                  <div class="text-danger small mt-1">{{ error }}</div>
-                {% endfor %}
-              </div>
 
               <!-- Qtd Produzida (2 Colunas) -->
-              <div class="col-md-2">
+              <div class="col-md-6">
                 <label class="form-label fw-semibold small text-uppercase text-secondary" for="{{ registro_form.quantidade_produzida.id_for_label }}">
                   Produzido
                 </label>
@@ -170,7 +157,7 @@
               </div>
 
               <!-- Qtd Perda (2 Colunas) -->
-              <div class="col-md-2">
+              <div class="col-md-6">
                 <label class="form-label fw-semibold small text-uppercase text-secondary" for="{{ registro_form.quantidade_perda.id_for_label }}">
                   Perda
                 </label>
@@ -218,7 +205,7 @@
           <table class="table table-hover align-middle mb-0 text-center small table-custom">
             <thead>
               <tr>
-                <th class="text-start ps-3">Hora - Período</th>
+                <th class="text-start ps-3">Hora</th>
                 <th class="text-start">Modelo / Peça</th>
                 {% if ficha.tipo == 'numerada' %}
                   <th class="text-start">Meta Planejada</th>
@@ -232,12 +219,11 @@
             </thead>
             <tbody>
               {% for reg in ultimos_registros %}
-                <!-- Define a classe da linha baseada no tipo de lançamento -->
                 <tr class="{% if reg.quantidade_perda > 0 and reg.quantidade_produzida == 0 %}table-danger bg-opacity-10{% elif reg.quantidade_perda > 0 %}table-warning bg-opacity-10{% elif reg.na_meta %}row-ok{% else %}row-alert{% endif %}">
                   
-                  <!-- Troque a coluna antiga pelo rótulo do período -->
+                  <!-- Exibe o rótulo do período ou a data/hora do registro -->
                   <td class="text-start ps-3 fw-bold mono text-secondary">
-                    {{ reg.periodo.rotulo|default:reg.periodo }}
+                      {{ reg.registrado_em|date:"H:i" }}
                   </td>
                   <td class="text-start fw-bold text-dark">
                     {{ reg.item_rotulo }}
@@ -347,13 +333,11 @@
                       <i class="fa-solid fa-check me-1" style="color: var(--ok-500);"></i>
                       <strong class="text-dark">{{ peca_hab.peca.nome }}</strong>
                       {% if ficha.tipo == 'numerada' %}
-                        {# Ficha Numerada: exibe Produzido / Planejado #}
                         Produzido: <strong class="text-dark">{{ peca_hab.total_produzido }}</strong> / {{ peca_hab.quantidade_planejada|default:"-" }} Bat
                         {% if peca_hab.total_perda > 0 %}
                           <span class="text-danger">/ Perda: <strong class="text-dark">{{ peca_hab.total_perda }}</strong></span>
                         {% endif %}
                       {% else %}
-                        {# Ficha Padrão: exibe apenas o Produzido #}
                         Produzido: <strong class="text-dark">{{ peca_hab.total_produzido }}</strong> Bat 
                         {% if peca_hab.total_perda > 0 %}
                           <span class="text-danger">/ Perda: <strong class="text-dark">{{ peca_hab.total_perda }}</strong></span>
@@ -382,7 +366,6 @@
                     {% endfor %}
                   </select>
 
-                  {# Exibe o campo de Qtd Planejada APENAS se a ficha for Numerada #}
                   {% if ficha.tipo == 'numerada' %}
                     <input type="number" 
                           name="quantidade_planejada" 
@@ -432,7 +415,7 @@
             {% endfor %}
           </div>
 
-          {# 2. Numeração (Tamanho do Calçado) #}
+          {# 2. Numeração #}
           <div class="mb-3">
             <label class="form-label small fw-semibold text-secondary text-uppercase" for="{{ item_form.numeracao.id_for_label }}">
               {{ item_form.numeracao.label }}
@@ -443,7 +426,7 @@
             {% endfor %}
           </div>
 
-          {# 3. SE FOR numerada, pede a quantidade desejada #}
+          {# 3. SE FOR numerada #}
           {% if ficha.tipo == 'numerada' %}
             <div class="mb-3">
               <label class="form-label small fw-semibold text-secondary text-uppercase" for="{{ item_form.quantidade_planejada.id_for_label }}">
@@ -482,9 +465,6 @@
   const temposPorModelo = JSON.parse(document.getElementById('tempos-por-modelo-data')?.textContent || '{}');
   const metasPorItem = JSON.parse(document.getElementById('metas-por-item-data')?.textContent || '{}');
   const pecasPorItem = JSON.parse(document.getElementById('pecas-por-item-data')?.textContent || '{}');
-  
-  // Lê o JSON dos períodos preenchido diretamente da View
-  const proximosPeriodos = JSON.parse('{{ proximos_periodos_json|escapejs }}');
 
   // Elements - Form de Modelo (Tempo Estimado)
   const selectModeloItem = document.getElementById('{{ item_form.modelo.id_for_label }}');
@@ -588,42 +568,17 @@
     }
   }
 
-  // 4. Função: Sugestão de Período (Preenche a tela e o input oculta de envio)
-  function sugerirProximoPeriodo() {
-    if (!selectItem) return;
-
-    const itemId = selectItem.value;
-    const pecaId = selectPeca ? selectPeca.value : '';
-
-    const chaveLookup = pecaId ? `${itemId}_${pecaId}` : `${itemId}`;
-    
-    const proximoObj = proximosPeriodos[chaveLookup]; 
-
-    const displayPeriodo = document.getElementById('display_periodo_atual');
-    const hiddenInputPeriodo = document.getElementById('{{ registro_form.periodo.id_for_label }}');
-
-    if (proximoObj) {
-      if (displayPeriodo) displayPeriodo.value = proximoObj.rotulo;
-      if (hiddenInputPeriodo) hiddenInputPeriodo.value = proximoObj.id;
-    } else {
-      if (displayPeriodo) displayPeriodo.value = "Sem horários restantes";
-      if (hiddenInputPeriodo) hiddenInputPeriodo.value = "";
-    }
-  }
-
-  // Event Listeners (Garante que tudo atualize junto ao selecionar opções)
+  // Event Listeners
   selectModeloItem?.addEventListener('change', atualizarPreviewTempo);
   inputQtdPlanejada?.addEventListener('input', atualizarPreviewTempo);
 
   selectItem?.addEventListener('change', () => {
     atualizarPecasDisponiveis();
     atualizarPreviewMeta();
-    sugerirProximoPeriodo();
   });
 
   selectPeca?.addEventListener('change', () => {
     atualizarPreviewMeta();
-    sugerirProximoPeriodo();
   });
 
   inputQtdProduzida?.addEventListener('input', atualizarPreviewMeta);
@@ -636,11 +591,10 @@
     document.getElementById('btnAddItem').disabled = true;
   });
 
-  // Execução Inicial na carga da página
+  // Execução Inicial
   if (selectItem && selectItem.value) {
     atualizarPecasDisponiveis();
     atualizarPreviewMeta();
-    sugerirProximoPeriodo();
   }
 </script>
 {% endblock %}

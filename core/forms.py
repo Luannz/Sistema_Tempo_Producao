@@ -1,9 +1,8 @@
 # ==================== FORMS.PY ====================
 from django import forms
-from .models import Usuario, Modelo, Peca, Ficha, ItemFicha, RegistroProducao, ItemFichaPeca, Setor, Operador, GradeHorario, IntervaloHorario
+from .models import Usuario, Modelo, Peca, Ficha, ItemFicha, RegistroProducao, ItemFichaPeca, Setor, Operador
 from django.contrib.auth.forms import UserCreationForm
 from django.db.models.functions import Length
-from django.forms import inlineformset_factory
 
 
 # formulario pra CRIAR um usuario
@@ -18,7 +17,7 @@ class RegistroUsuarioForm(UserCreationForm):
 
     class Meta:
         model = Usuario
-        fields = ['username','tipo','setor']
+        fields = ['username', 'tipo', 'setor']
         labels = {
             'tipo': 'Tipo de Perfil',
         }
@@ -49,6 +48,7 @@ class SetorForm(forms.ModelForm):
         nome = self.cleaned_data.get('nome')
         return nome.upper() if nome else nome
 
+
 class OperadorForm(forms.ModelForm):
     class Meta:
         model = Operador
@@ -67,7 +67,6 @@ class OperadorForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         # Filtra apenas setores para exibição em ordem alfabética
         self.fields['setor'].queryset = Setor.objects.all().order_by('nome')
-    
 
 
 class ModeloForm(forms.ModelForm):
@@ -88,8 +87,8 @@ class ModeloForm(forms.ModelForm):
             }),
             'ativo': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
         }
- 
- 
+
+
 class PecaForm(forms.ModelForm):
     class Meta:
         model = Peca
@@ -109,7 +108,7 @@ class PecaForm(forms.ModelForm):
                 'id': 'id_tempo_fabricacao'
             }),
         }
- 
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         # só modelos ativos aparecem pra vincular peça nova
@@ -123,16 +122,15 @@ class PecaForm(forms.ModelForm):
         cleaned_data = super().clean()
         modelo = cleaned_data.get('modelo')
         tempo = cleaned_data.get('tempo_fabricacao')
- 
-        # Mesma regra que já existe no clean() do model Peca, só que aqui
-        # o erro aparece bonito, ligado ao campo, em vez de estourar um 500
+
         if modelo and tempo and tempo > modelo.tempo_fabricacao:
             self.add_error(
                 'tempo_fabricacao',
                 f"Não pode passar do tempo do modelo ({modelo.tempo_fabricacao} min)."
             )
         return cleaned_data
-    
+
+
 class FichaForm(forms.ModelForm):
     tipo = forms.ChoiceField(
         choices=Ficha.Tipo.choices,
@@ -143,16 +141,14 @@ class FichaForm(forms.ModelForm):
 
     class Meta:
         model = Ficha
-        fields = ['tipo', 'operador', 'grade_horario']
+        fields = ['tipo', 'operador']
         labels = {'tipo': 'Tipo de ficha'}
         widgets = {
             'tipo': forms.RadioSelect,
             'operador': forms.Select(attrs={'class': 'form-select'}),
-            'grade_horario': forms.Select(attrs={'class': 'form-select'}),
         }
 
     def __init__(self, *args, **kwargs):
-        # Extrai o 'user' que a view vai passar
         user = kwargs.pop('user', None)
         super().__init__(*args, **kwargs)
 
@@ -172,13 +168,6 @@ class FichaForm(forms.ModelForm):
             'required': 'Por favor, selecione o operador responsável antes de continuar.'
         }
 
-        # Configura o queryset das Grades de Horário (Apenas ativas)
-        self.fields['grade_horario'].queryset = GradeHorario.objects.filter(ativo=True)
-        self.fields['grade_horario'].empty_label = "Selecione a grade de horário..."
-        self.fields['grade_horario'].required = True
-        self.fields['grade_horario'].error_messages = {
-            'required': 'Por favor, selecione a grade de horário da ficha.'
-        }
 
 class ItemFichaForm(forms.ModelForm):
     class Meta:
@@ -201,22 +190,19 @@ class ItemFichaForm(forms.ModelForm):
                 'class': 'form-control', 'min': 1, 'placeholder': 'Ex: 500'
             }),
         }
- 
+
     def __init__(self, *args, ficha=None, **kwargs):
         super().__init__(*args, **kwargs)
         self.ficha = ficha
-        # a instância já nasce ligada à ficha certa — necessário pro clean() do
-        # model funcionar e pro unique_together (ficha, modelo) ser respeitado
         self.instance.ficha = ficha
- 
+
         self.fields['modelo'].queryset = Modelo.objects.filter(ativo=True).annotate(tamanho_numero=Length('numero')).order_by('tamanho_numero', 'numero')
 
- 
         # ficha padrão não usa quantidade — nem mostra o campo
         if ficha and ficha.tipo == Ficha.Tipo.PADRAO:
             self.fields['quantidade_planejada'].widget = forms.HiddenInput()
             self.fields['quantidade_planejada'].required = False
- 
+
     def clean(self):
         cleaned_data = super().clean()
         modelo = cleaned_data.get('modelo')
@@ -238,26 +224,18 @@ class ItemFichaForm(forms.ModelForm):
             if not quantidade or quantidade <= 0:
                 self.add_error('quantidade_planejada', "Informe quantos pares serão produzidos.")
         else:
-            # ficha padrão NUNCA carrega quantidade, mesmo que algo
-            # (acidental ou manipulado) tenha vindo no POST
             cleaned_data['quantidade_planejada'] = None
- 
+
         return cleaned_data
- 
+
     def save(self, commit=True):
         self.instance.ficha = self.ficha
         if self.ficha.tipo == Ficha.Tipo.PADRAO:
             self.instance.quantidade_planejada = None
         return super().save(commit=commit)
-    
+
 
 class ItemFichaPecaForm(forms.Form):
-    """
-    Form simples (não ModelForm) pra habilitar uma peça já cadastrada dentro
-    de UM item_ficha específico. Usa Form comum porque o item_ficha vem fixo
-    (hidden) por linha da tabela — o usuário nunca escolhe o modelo aqui de
-    novo, só a peça, o que evita mandar peça pro modelo errado.
-    """
     item_ficha = forms.ModelChoiceField(queryset=ItemFicha.objects.none(), widget=forms.HiddenInput())
     peca = forms.ModelChoiceField(queryset=Peca.objects.none())
     quantidade_planejada = forms.IntegerField(
@@ -268,16 +246,15 @@ class ItemFichaPecaForm(forms.Form):
             'placeholder': 'Qtd. Plan'
         })
     )
- 
+
     def __init__(self, *args, ficha=None, **kwargs):
         super().__init__(*args, **kwargs)
         self.ficha = ficha
         if ficha:
             self.fields['item_ficha'].queryset = ficha.itens.all()
-            # a peça só pode pertencer a algum modelo que já está nesta ficha
             modelo_ids = ficha.itens.values_list('modelo_id', flat=True)
             self.fields['peca'].queryset = Peca.objects.filter(modelo_id__in=modelo_ids)
- 
+
     def clean(self):
         cleaned_data = super().clean()
         item_ficha = cleaned_data.get('item_ficha')
@@ -289,7 +266,7 @@ class ItemFichaPecaForm(forms.Form):
                 self.add_error('peca', "Essa peça não pertence ao modelo deste item.")
             elif ItemFichaPeca.objects.filter(item_ficha=item_ficha, peca=peca).exists():
                 self.add_error('peca', "Essa peça já foi adicionada a este modelo, nesta ficha.")
-        # --- VALIDAÇÃO DE FICHA NUMERADA ---
+
         if self.ficha:
             eh_numerada = self.ficha.tipo == Ficha.Tipo.NUMERADA
             if eh_numerada and not quantidade_planejada:
@@ -297,7 +274,7 @@ class ItemFichaPecaForm(forms.Form):
             elif not eh_numerada and quantidade_planejada:
                 cleaned_data['quantidade_planejada'] = None
         return cleaned_data
- 
+
     def save(self):
         return ItemFichaPeca.objects.create(
             item_ficha=self.cleaned_data['item_ficha'],
@@ -305,25 +282,24 @@ class ItemFichaPecaForm(forms.Form):
             quantidade_planejada=self.cleaned_data.get('quantidade_planejada')
         )
 
+
 class ItemFichaChoiceField(forms.ModelChoiceField):
     def label_from_instance(self, obj):
-        # Renderiza: "Modelo 1020 (Nº 37)"
         return f"{obj.modelo.numero} (Nº {obj.numeracao})"
-        
+
+
 class RegistroProducaoForm(forms.ModelForm):
     class Meta:
         model = RegistroProducao
-        fields = ['item_ficha', 'peca', 'periodo', 'quantidade_produzida', 'quantidade_perda']
+        fields = ['item_ficha', 'peca', 'quantidade_produzida', 'quantidade_perda']
         labels = {
             'item_ficha': 'Modelo',
             'peca': 'Peça (opcional)',
-            'periodo': 'Período',
-            'quantidade_produzida': 'Quantidade produzida nesta hora',
-            'quantidade_perda': 'Quantidade perdida nesta hora (opcional)',
+            'quantidade_produzida': 'Quantidade produzida',
+            'quantidade_perda': 'Quantidade perdida (opcional)',
         }
         widgets = {
             'item_ficha': forms.Select(attrs={'class': 'form-select'}),
-            'periodo': forms.Select(attrs={'class': 'form-select'}),
             'peca': forms.Select(attrs={'class': 'form-select'}),
             'quantidade_produzida': forms.NumberInput(attrs={
                 'class': 'form-control', 'min': 0, 'placeholder': 'Ex: 25'
@@ -332,37 +308,33 @@ class RegistroProducaoForm(forms.ModelForm):
                 'class': 'form-control', 'min': 0, 'placeholder': 'Ex: 2 (opcional)'
             }),
         }
- 
+
     def __init__(self, *args, ficha=None, **kwargs):
         super().__init__(*args, **kwargs)
         self.ficha = ficha
 
-        # Tornei os dois campos opcionais no formulário
         self.fields['peca'].required = False
-        self.fields['quantidade_produzida'].required = False # Opcional no formulário
-        self.fields['quantidade_perda'].required = False # Opcional no formulário
-
+        self.fields['quantidade_produzida'].required = False
+        self.fields['quantidade_perda'].required = False
         self.fields['peca'].empty_label = "---------"
- 
+
         if ficha:
             self.fields['item_ficha'].label_from_instance = lambda obj: f"{obj.modelo.numero} (Nº {obj.numeracao})"
             self.fields['item_ficha'].queryset = ficha.itens.select_related('modelo')
-            # só peças JÁ HABILITADAS em algum item desta ficha aparecem aqui —
-            # o JS depois filtra visualmente pelo modelo escolhido no dropdown
             pecas_habilitadas_ids = ItemFichaPeca.objects.filter(
                 item_ficha__ficha=ficha
             ).values_list('peca_id', flat=True)
             self.fields['peca'].queryset = Peca.objects.filter(id__in=pecas_habilitadas_ids)
- 
+
     def clean_item_ficha(self):
         item = self.cleaned_data['item_ficha']
         if self.ficha and item.ficha_id != self.ficha.id:
             raise forms.ValidationError("Esse modelo não pertence a esta ficha.")
         return item
- 
+
     def clean_quantidade_produzida(self):
-        qtd = self.cleaned_data['quantidade_produzida']
-        if qtd is not None and qtd< 0:
+        qtd = self.cleaned_data.get('quantidade_produzida')
+        if qtd is not None and qtd < 0:
             raise forms.ValidationError("Quantidade não pode ser negativa.")
         return qtd or 0
 
@@ -370,63 +342,21 @@ class RegistroProducaoForm(forms.ModelForm):
         perda = self.cleaned_data.get('quantidade_perda')
         if perda is not None and perda < 0:
             raise forms.ValidationError("Quantidade de perda não pode ser negativa.")
-        return perda or 0 # Se deixar em branco retorna 0
- 
+        return perda or 0
+
     def clean(self):
         cleaned_data = super().clean()
         item_ficha = cleaned_data.get('item_ficha')
         peca = cleaned_data.get('peca')
-        periodo = cleaned_data.get('periodo')
 
-        # Busca os valores já limpos pelos métodos acima (retornam 0 se vierem vazios)
         qtd_produzida = cleaned_data.get('quantidade_produzida', 0)
         qtd_perda = cleaned_data.get('quantidade_perda', 0)
-        # 2. ADICIONA A CONDICIONAL: SE OS DOIS FOREM ZERO, BLOQUEIA
+
         if qtd_produzida == 0 and qtd_perda == 0:
-            raise forms.ValidationError(
-                "Informe ao menos a quantidade produzida ou a quantidade de perda."
-            )
+            raise forms.ValidationError("Informe ao menos a quantidade produzida ou a quantidade perdida.")
 
-        if item_ficha and periodo:
-            ja_existe = RegistroProducao.objects.filter(
-                item_ficha=item_ficha,
-                peca=peca,
-                periodo=periodo
-            ).exclude(pk=self.instance.pk).exists()
-
-            if ja_existe and periodo != 'EXTRA':
-                self.add_error('periodo', "Este período já foi registrado para este modelo/peça.")
-        
         if peca and item_ficha:
-            # a peça precisa ter sido habilitada especificamente pra ESTE item —
-            # sem isso, alguém poderia registrar uma peça de um modelo que nem
-            # está sendo rastreado nesta ficha
             if not ItemFichaPeca.objects.filter(item_ficha=item_ficha, peca=peca).exists():
                 self.add_error('peca', "Essa peça não foi habilitada para este modelo, nesta ficha.")
- 
+
         return cleaned_data
-
-
-class GradeHorarioForm(forms.ModelForm):
-    class Meta:
-        model = GradeHorario
-        fields = ['nome', 'ativo']
-        widgets = {
-            'nome': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ex: Padrão 1h (07h às 17h)'}),
-            'ativo': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
-        }
-
-
-# FormSet para gerenciar múltiplos intervalos dentro da mesma grade
-IntervaloHorarioFormSet = inlineformset_factory(
-    GradeHorario,
-    IntervaloHorario,
-    fields=['ordem', 'rotulo', 'e_extra'],
-    extra=0,  # pra nao criar um intervalo extra automaticamente
-    can_delete=True,
-    widgets={
-        'ordem': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': '1'}),
-        'rotulo': forms.TextInput(attrs={'class': 'form-control', 'placeholder': '07:00-08:00'}),
-        'e_extra': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
-    }
-)

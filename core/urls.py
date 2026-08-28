@@ -33,12 +33,6 @@ urlpatterns = [
     path('fichas/<int:ficha_id>/visualizar/', views.visualizar_ficha, name='visualizar_ficha'),
     path('fichas/<int:ficha_id>/excluir/',views.excluir_ficha,name='excluir_ficha'),
     
-    # ==================== HORARIOS ====================
-    path('grades/', views.grade_horario_list, name='grade_horario_list'),
-    path('grades/nova/', views.grade_horario_create, name='grade_horario_create'),
-    path('grades/<int:pk>/editar/', views.grade_horario_update, name='grade_horario_update'),
-    path('grades/<int:pk>/excluir/', views.grade_horario_delete, name='grade_horario_delete'),
-
     # ==================== HISTORICO ====================
     path('historico/fichas/', views.historico_fichas, name='historico_fichas'),
     path('historico/fichas/<int:usuario_id>/', views.historico_ficha_usuario, name='historico_fichas_usuario'),

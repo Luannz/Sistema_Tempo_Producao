@@ -9,7 +9,6 @@
   <div class="card p-4 mb-4 shadow-sm border-0">
     <div class="d-flex flex-wrap justify-content-between align-items-center gap-3">
       <div>
-        {# Linha do Título com Badge ao lado #}
         <div class="d-flex align-items-center gap-2 mb-1">
           <h4 class="display-font mb-0 fw-bold text-dark" style="letter-spacing: 0.03em;">
             Ficha #{{ ficha.id }}
@@ -26,7 +25,6 @@
           {% endif %}
         </div>
 
-        {# Subtítulo com Supervisor, Data e Operador (se existir) #}
         <div class="d-flex align-items-center flex-wrap gap-2 small text-muted">
           <span>
             <i class="fa-solid fa-user-tie me-1 opacity-75"></i><strong>{{ ficha.usuario }}</strong>
@@ -66,17 +64,12 @@
       <div class="col">
         <div class="card h-100 shadow-sm border-0 position-relative overflow-hidden">
           
-          {# --- Barrinha de topo --- #}
           <div class="position-absolute top-0 start-0 end-0 
-            {% if ficha.tipo == 'numerada' and linha.concluido %}bg-success
-            {% elif linha.na_meta_total %}bg-success
-            {% elif linha.na_meta_total == False %}bg-danger
-            {% else %}bg-secondary-subtle{% endif %}" style="height: 3px;">
+            {% if ficha.tipo == 'numerada' and linha.concluido %}bg-success{% else %}bg-secondary-subtle{% endif %}" style="height: 3px;">
           </div>
 
           <div class="card-body p-2 d-flex flex-column justify-content-between">
             <div>
-              {# --- Modelo + Badge de Status --- #}
               <div class="d-flex justify-content-between align-items-center mb-1">
                 <span class="fw-bold text-dark small text-truncate" title="{{ linha.modelo.numero }}">
                   <i class="fa-solid fa-shoe-prints text-primary me-1"></i>{{ linha.modelo.numero }} - Nº{{linha.item.numeracao}}
@@ -89,7 +82,6 @@
                 {% endif %}
               </div>
 
-              {# --- Barra de Progresso Visual (Exclusivo Ficha Numerada) --- #}
               {% if ficha.tipo == 'numerada' %}
                 <div class="progress mb-2" style="height: 4px;">
                   <div class="progress-bar {% if linha.concluido %}bg-success{% else %}bg-primary{% endif %}" 
@@ -99,7 +91,6 @@
                 </div>
               {% endif %}
 
-              {# --- Bloco Mínimo de Números (Com Perda do Modelo) --- #}
               <div class="bg-light rounded p-1 mb-1 text-center">
                 <div class="d-flex justify-content-around align-items-center">
                   <div>
@@ -109,7 +100,6 @@
 
                   <div class="border-start" style="height: 18px;"></div>
 
-                  {# --- Perda Acumulada do Modelo --- #}
                   <div>
                     <span class="d-block text-muted" style="font-size: 0.6rem;">PERD</span>
                     <span class="fw-bold mono small {% if linha.perda > 0 %}text-danger{% else %}text-muted opacity-50{% endif %}">
@@ -130,31 +120,21 @@
                       <span class="d-block text-muted" style="font-size: 0.6rem;">PLAN</span>
                       <span class="fw-semibold text-secondary mono small">{{ linha.qtd_planejada }}</span>
                     </div>
-                  {% else %}
-                    <div class="border-start" style="height: 18px;"></div>
-                    <div>
-                      <span class="d-block text-muted" style="font-size: 0.6rem;">ESPERADO</span>
-                      <span class="fw-semibold text-secondary mono small">{{ linha.meta_esperada }}</span>
-                    </div>
                   {% endif %}
                 </div>
               </div>
 
-              {# --- Rodapé com Tempo Restante Estimado --- #}
               {% if ficha.tipo == 'numerada' and linha.tempo_restante_min > 0 %}
                 <div class="text-center text-muted mt-1" style="font-size: 0.62rem;">
                   <i class="fa-regular fa-clock me-1"></i>Aprox. <strong>{{ linha.tempo_restante_formatado }}</strong>
                 </div>
               {% endif %}
 
-              {# --- Peças Habilitadas --- #}
               {% if linha.pecas_resumo %}
               <div class="pt-2 border-top mt-1" style="font-size: 0.68rem;">
                 {% for linha_peca in linha.pecas_resumo %}
                 <div class="mb-2">
-                  {# Linha com Nome da Peça, Produção, Perda e Planejado #}
                   <div class="bg-light border rounded p-2 mb-2 shadow-sm">
-                    {# Linha Superior: Nome da Peça e Status de Conclusão #}
                     <div class="d-flex justify-content-between align-items-center mb-1">
                       <span class="fw-semibold text-dark text-truncate me-1" style="max-width: 110px;" title="{{ linha_peca.peca.nome }}">
                         {{ linha_peca.peca.nome }}
@@ -167,9 +147,7 @@
                       {% endif %}
                     </div>
 
-                    {# Linha Inferior: Métricas (Produzido / Planejado + Perda) #}
                     <div class="d-flex justify-content-between align-items-center small">
-                      {# Bloco Produção/Planejado #}
                       <div class="mono">
                         <span class="fw-bold text-dark fs-6">{{ linha_peca.produzido }}</span>
                         {% if ficha.tipo == 'numerada' %}
@@ -177,7 +155,6 @@
                         {% endif %}
                       </div>
 
-                      {# Badge de Perda (Só aparece se houver perda) #}
                       {% if linha_peca.perda > 0 %}
                         <span class="badge text-bg-danger-subtle text-danger border border-danger-subtle rounded-1" title="Perdas acumuladas" style="font-size: 0.65rem;">
                           <i class="fa-solid fa-triangle-exclamation me-1"></i>Perd: {{ linha_peca.perda }}
@@ -185,15 +162,14 @@
                       {% endif %}
                     </div>
 
-                    {# Barra de Progresso Integrada (Apenas para Ficha Numerada) #}
                     {% if ficha.tipo == 'numerada' %}
                       <div class="progress mt-2" style="height: 3px;">
                         <div class="progress-bar {% if linha_peca.concluido %}bg-success{% else %}bg-primary{% endif %}" 
-                            role="progressbar" 
-                            style="width: {{ linha_peca.percentual_concluido|default:0 }}%;" 
-                            aria-valuenow="{{ linha_peca.percentual_concluido|default:0 }}" 
-                            aria-valuemin="0" 
-                            aria-valuemax="100">
+                             role="progressbar" 
+                             style="width: {{ linha_peca.percentual_concluido|default:0 }}%;" 
+                             aria-valuenow="{{ linha_peca.percentual_concluido|default:0 }}" 
+                             aria-valuemin="0" 
+                             aria-valuemax="100">
                         </div>
                       </div>
                     {% endif %}
@@ -210,141 +186,100 @@
     {% endfor %}
   </div>
 
-  {# ===== HISTÓRICO CRONOLÓGICO COMPLETO ===== #}
+  {# ===== HISTÓRICO CRONOLÓGICO DE BAIXAS ===== #}
   <div class="card">
-    <div class="card-header bg-white border-bottom py-3">
-      <h6 class="mb-0 display-font">Produção registrada, hora a hora</h6>
+    <div class="card-header bg-white border-bottom py-3 d-flex justify-content-between align-items-center">
+      <h6 class="mb-0 display-font">Lançamentos / Baixas efetuadas</h6>
     </div>
     <div class="table-responsive">
-      <table class="table table-hover align-middle mb-0">
-        <thead class="table-light">
-          <tr class="small text-uppercase text-secondary">
-            <th>Hora</th>
-            <th>Modelo / Peça</th>
-
+      <table class="table table-hover align-middle mb-0 text-center small table-custom">
+        <thead>
+          <tr>
+            <th class="text-start ps-3">Hora</th>
+            <th class="text-start">Modelo / Peça</th>
             {% if ficha.tipo == 'numerada' %}
-              <th>Meta Planejada</th>
+              <th class="text-start">Meta Planejada</th>
             {% endif %}
-
             <th>Prod/H</th>
-            <th>Produzido</th>
             <th>Perda</th>
-            <th>Diferença-T</th>
-            <th>Status</th>
+            <th>Produzido</th>
+            <th>Diferença</th>
+            <th class="pe-3">Status</th>
           </tr>
         </thead>
         <tbody>
-          {% for registro in registros %}
-            <tr class="
-              {% if registro.quantidade_produzida == 0 and registro.quantidade_perda > 0 %}
-                table-danger bg-opacity-25
-              {% elif registro.quantidade_perda > 0 %}
-                table-warning bg-opacity-25
-              {% elif registro.dentro_da_meta %}
-                row-ok
-              {% else %}
-                row-alert
-              {% endif %}
-              {% if registro.periodo.e_extra %}linha-hora-extra{% endif %}
-            ">
-              {# --- CÉLULA DE HORA --- #}
-              <td class="fw-semibold mono">
-                {{ registro.periodo.rotulo }}
-                {% if registro.periodo.e_extra %}
-                  <span class="text-amber ms-1" title="Hora Extra">
-                    <i class="fa-solid fa-clock"></i>
-                  </span>
-                {% endif %}
-              </td>
+          {% for reg in registros %}
+            <tr class="{% if reg.quantidade_produzida == 0 and reg.quantidade_perda > 0 %}table-danger bg-opacity-10{% elif reg.quantidade_perda > 0 %}table-warning bg-opacity-10{% elif reg.dentro_da_meta %}row-ok{% else %}row-alert{% endif %}">
               
-              <td class="fw-semibold">
-                {{ registro.item_ficha.modelo.numero }} (Nº{{registro.item_ficha.numeracao}})
-                {% if registro.peca %}
-                  <span class="fw-semibold">· {{ registro.peca.nome }}</span>
-                {% endif %}
+              {# 1. Horário da Baixa #}
+              <td class="text-start ps-3 fw-bold mono text-secondary">
+                {{ reg.registrado_em|date:"H:i" }}
               </td>
-              
-              {#  coluna simplificada pois agora puxa da property dentro do models #}
+
+              {# 2. Modelo / Peça #}
+              <td class="text-start fw-bold text-dark">
+                {{ reg.item_rotulo }}
+              </td>
+
+              {# 3. Meta Planejada (Apenas Ficha Numerada) #}
               {% if ficha.tipo == 'numerada' %}
-                <td class="mono">
-                  {{ registro.qtd_planejada|default:"-" }}
+                <td class="fw-medium text-muted text-start mono">
+                  {{ reg.qtd_planejada|default:"—" }}
                 </td>
               {% endif %}
 
-              <td class="mono">{{ registro.meta_do_periodo }}</td>
-              <td class="mono">{{ registro.quantidade_produzida }}</td>
+              {# 4. Meta (Pares por Hora) #}
+              <td class="fw-medium text-dark mono">
+                {{ reg.meta_do_periodo }} <small class="text-muted">bat/h</small>
+              </td>
               
-              {# --- NOVA CÉLULA DE PERDA --- #}
-              <td class="mono fw-bold">
-                {% if registro.quantidade_perda > 0 %}
-                  <span class="text-danger">
-                    <i style="font-size: 0.75rem;"></i>{{ registro.quantidade_perda }}
-                  </span>
+              {# 5. Perda (Fonte vermelha se houver perda) #}
+              <td class="fw-bold fs-6 mono {% if reg.quantidade_perda > 0 %}text-danger{% else %}text-muted{% endif %}">
+                {% if reg.quantidade_perda > 0 %}{{ reg.quantidade_perda }}{% else %}0{% endif %}
+              </td>
+              
+              {# 6. Produzido #}
+              <td class="fw-bold fs-6 mono {% if reg.quantidade_produzida == 0 %}text-muted{% endif %}">
+                {{ reg.quantidade_produzida }}
+              </td>
+
+              {# 7. Diferença (Fonte Verde se >= 0, Vermelha se < 0) #}
+              <td class="fw-bold mono">
+                {% if reg.quantidade_produzida == 0 and reg.quantidade_perda > 0 %}
+                  <span class="text-muted">—</span>
                 {% else %}
-                  <span class="text-secondary opacity-50">0</span>
+                  <span class="{% if reg.diferenca_meta >= 0 %}text-success{% else %}text-danger{% endif %}">
+                    {% if reg.diferenca_meta > 0 %}+{% endif %}{{ reg.diferenca_meta }}
+                  </span>
                 {% endif %}
               </td>
-              <td class="mono fw-bold">
-                {% if registro.quantidade_produzida == 0 and registro.quantidade_perda > 0 %}
-                  {# 1. Apenas Perda: Não mostra diferença para não confundir #}
-                  <span class="text-secondary opacity-50">-</span>
 
-                {% elif registro.quantidade_perda > 0 %}
-                  {# 2. Produção + Perda: Usa cor de alerta (Laranja/Âmbar) para chamar atenção #}
-                  <span style="color: var(--amber-600, #c94f1f);">
-                    {% if registro.diferenca_meta > 0 %}+{% endif %}{{ registro.diferenca_meta }}
+              {# 8. Status (Badges Limpos com Ícones) #}
+              <td class="pe-3">
+                {% if reg.quantidade_produzida == 0 and reg.quantidade_perda > 0 %}
+                  <span class="badge bg-danger-subtle text-danger border border-danger-subtle px-2 py-1">
+                    <i class="fa-solid fa-circle-minus me-1"></i>Perda
                   </span>
-
+                {% elif reg.quantidade_perda > 0 %}
+                  <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle px-2 py-1">
+                    <i class="fa-solid fa-triangle-exclamation me-1"></i>Parcial Perda
+                  </span>
+                {% elif reg.dentro_da_meta %}
+                  <span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1">
+                    <i class="fa-solid fa-check me-1"></i>Na Meta
+                  </span>
                 {% else %}
-                  {# 3. Apenas Produção (Sem Perda): Cores padrão Verde / Vermelho / Neutro #}
-                  {% if registro.diferenca_meta > 0 %}
-                    <span class="text-success">+{{ registro.diferenca_meta }}</span>
-                  {% elif registro.diferenca_meta < 0 %}
-                    <span class="text-danger">{{ registro.diferenca_meta }}</span>
-                  {% else %}
-                    <span class="text-secondary">0</span>
-                  {% endif %}
+                  <span class="badge bg-danger-subtle text-danger border border-danger-subtle px-2 py-1">
+                    <i class="fa-solid fa-xmark me-1"></i>Abaixo
+                  </span>
                 {% endif %}
               </td>
-              {# --- CÉLULA DE STATUS --- #}
-              <td>
-                {% if registro.quantidade_produzida == 0 and registro.quantidade_perda > 0 %}
-                  {# 1. Apenas Perda #}
-                  <span class="badge text-bg-danger">
-                    <i class="fa-solid fa-triangle-exclamation me-1"></i>Perda
-                  </span>
 
-                {% elif registro.quantidade_perda > 0 %}
-                  {# 2. Produção + Perda (Badge Âmbar/Laranja com status da meta) #}
-                  {% if registro.dentro_da_meta %}
-                    <span class="badge" style="background-color: var(--amber-500, #c94f1f); color: #fff;">
-                      <i class="fa-solid fa-caret-up me-1"></i>Na meta
-                    </span>
-                  {% else %}
-                    <span class="badge" style="background-color: var(--amber-600, #c94f1f2c); color: #fff;">
-                      <i class="fa-solid fa-caret-down me-1"></i>{{ registro.diferenca_meta }} Abaixo
-                    </span>
-                  {% endif %}
-
-                {% else %}
-                  {# 3. Apenas Produção (Badges Padrão Verde / Vermelho) #}
-                  {% if registro.dentro_da_meta %}
-                    <span class="badge text-bg-success">
-                      <i class="fa-solid fa-caret-up me-1"></i>Na meta
-                    </span>
-                  {% else %}
-                    <span class="badge text-bg-danger">
-                      <i class="fa-solid fa-caret-down me-1"></i>{{ registro.diferenca_meta }} Abaixo
-                    </span>
-                  {% endif %}
-                {% endif %}
-              </td>
-              </td>
             </tr>
           {% empty %}
             <tr>
-              <td colspan="{% if ficha.tipo == 'numerada' %}8{% else %}7{% endif %}" class="text-center text-secondary py-4">
-                Nenhuma produção registrada ainda.
+              <td colspan="{% if ficha.tipo == 'numerada' %}8{% else %}7{% endif %}" class="text-center text-muted py-4">
+                Nenhum registro de produção encontrado nesta ficha.
               </td>
             </tr>
           {% endfor %}
@@ -354,9 +289,9 @@
   </div>
 
 {% endblock %}
+
 {% block extra_css %}
 <style>
-  /* Badges de Estilo Industrial */
   .badge-industrial-amber {
     background: var(--amber-500);
     color: var(--graphite-950);
@@ -385,20 +320,9 @@
     line-height: 1;
   }
 
-  /* Utilitário para o padding do card/badge do operador */
   .py-0-5 {
     padding-top: 0.15rem !important;
     padding-bottom: 0.15rem !important;
-  }
-
-  /* Borda/Indicador industrial na extrema esquerda da linha de Hora Extra */
-  tr.linha-hora-extra > td:first-child {
-    border-left: 4px solid var(--amber-500, #e8622c) !important;
-  }
-
-  /* Cor do Ícone de Relógio */
-  .text-amber {
-    color: var(--amber-500, #e8622c) !important;
   }
 </style>
 {% endblock %}

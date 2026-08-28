@@ -108,29 +108,6 @@ class Peca(models.Model):
         return resultado.quantize(Decimal("0.0"), rounding=ROUND_HALF_UP)
 
 
-class GradeHorario(models.Model):
-    """Ex: Turno Diurno 1h, Turno 30min, Turno 2h"""
-    nome = models.CharField(max_length=100, help_text="Ex: Padrão 1h (07h às 17h)")
-    ativo = models.BooleanField(default=True)
-
-    def __str__(self):
-        return self.nome
-
-
-class IntervaloHorario(models.Model):
-    """Os horários individuais dentro de uma grade."""
-    grade = models.ForeignKey(GradeHorario, on_delete=models.CASCADE, related_name='intervalos')
-    ordem = models.PositiveIntegerField(help_text="Ordem cronológica (1, 2, 3...)")
-    rotulo = models.CharField(max_length=50, help_text="Ex: 07:00-08:00 ou 07:00-07:30")
-    e_extra = models.BooleanField(default=False, help_text="Marque se este for o slot de Hora Extra")
-
-    class Meta:
-        ordering = ['ordem']
-        unique_together = ('grade', 'ordem')
-
-    def __str__(self):
-        return f"{self.grade.nome} - {self.rotulo}"
-
 class Ficha(models.Model):
     class Tipo(models.TextChoices):
         PADRAO = 'padrao', 'Padrão'
@@ -138,8 +115,6 @@ class Ficha(models.Model):
 
     usuario = models.ForeignKey(Usuario, on_delete=models.PROTECT, related_name='fichas')
     operador = models.ForeignKey(Operador, on_delete=models.PROTECT, related_name='fichas',null=False, blank=False )
-
-    grade_horario = models.ForeignKey(GradeHorario, on_delete=models.PROTECT, related_name='fichas', verbose_name="Grade de Horários", null=True, blank=True)
 
     tipo = models.CharField(max_length=20, choices=Tipo.choices)
     data_criacao = models.DateField(auto_now_add=True)
@@ -233,36 +208,6 @@ class ItemFicha(models.Model):
         )['total']
         return total or 0
     
-    def proximo_periodo(self, peca_id=None):
-        """
-        Busca o próximo IntervaloHorario da Grade vinculada à Ficha para o item/peça específico.
-        """
-        grade = self.ficha.grade_horario 
-        # Se a ficha não tiver uma grade vinculada, retorna None com segurança
-        if not grade:
-            return None
-        
-        # Busca os IDs dos intervalos que já receberam lançamento nesta peça/item
-        intervalos_registrados = self.registros.filter(
-            peca_id=peca_id, 
-            periodo__isnull=False
-        ).values_list('periodo_id', flat=True)
-
-        # 1. Tenta pegar o próximo intervalo normal não registrado
-        proximo_normal = (
-            grade.intervalos
-            .filter(e_extra=False)
-            .exclude(id__in=intervalos_registrados)
-            .order_by('ordem')
-            .first()
-        )
-
-        if proximo_normal:
-            return proximo_normal
-
-        # 2. Se todos os normais foram preenchidos, retorna o slot de Hora Extra da grade
-        return grade.intervalos.filter(e_extra=True).first()
-
 class RegistroProducao(models.Model):
     """Cada baixa dada de hora em hora, no Modelo ou numa Peça específica dele."""
     item_ficha = models.ForeignKey(ItemFicha, on_delete=models.CASCADE, related_name='registros')
@@ -274,16 +219,6 @@ class RegistroProducao(models.Model):
     quantidade_perda = models.PositiveIntegerField(default=0, blank=True,help_text="Quantidade de peças/pares perdidos")
 
     registrado_em = models.DateTimeField(auto_now_add=True)
-    periodo = models.ForeignKey(
-            IntervaloHorario, 
-            on_delete=models.SET_NULL,  # Ou PROTECT 
-            verbose_name="Período/Horário",
-            null=True, blank=True
-        )    # default é 7 as 8, mas o supervisor pode alterar para outro período se necessário (ex: 08-09, 09-10, etc.)
-
-    class Meta:
-        # Garante que não haja dois registros para o mesmo período no mesmo item da ficha
-        unique_together = ('item_ficha', 'peca', 'periodo')
 
     def __str__(self):
         alvo = self.peca.nome if self.peca else self.item_ficha.modelo.numero
@@ -413,33 +348,3 @@ class ItemFichaPeca(models.Model):
         if horas > 0:
             return f"{horas}h {minutos:02d}m"
         return f"{minutos}m"
-
-    def proximo_periodo(self):
-        """
-        Busca o próximo IntervaloHorario da Grade para esta Peça Habilitada.
-        """
-        grade = self.item_ficha.ficha.grade_horario 
-        # Se a ficha não tiver uma grade vinculada, retorna None com segurança
-        if not grade:
-            return None
-        
-        # 1. Busca os IDs dos intervalos já registrados para ESTA peça específica neste item
-        intervalos_registrados = self.item_ficha.registros.filter(
-            peca_id=self.peca_id, 
-            periodo__isnull=False
-        ).values_list('periodo_id', flat=True)
-
-        # 2. Busca direto no banco o primeiro intervalo normal não preenchido (sem loop Python)
-        proximo_normal = (
-            grade.intervalos
-            .filter(e_extra=False)
-            .exclude(id__in=intervalos_registrados)
-            .order_by('ordem')
-            .first()
-        )
-
-        if proximo_normal:
-            return proximo_normal
-
-        # 3. Se todos os normais já foram lançados, retorna o slot de Hora Extra da grade
-        return grade.intervalos.filter(e_extra=True).first()
