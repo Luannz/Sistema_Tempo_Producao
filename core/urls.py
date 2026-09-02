@@ -33,6 +33,12 @@ urlpatterns = [
     path('fichas/<int:ficha_id>/visualizar/', views.visualizar_ficha, name='visualizar_ficha'),
     path('fichas/<int:ficha_id>/excluir/',views.excluir_ficha,name='excluir_ficha'),
     
+    path('ficha/item/<int:item_id>/remover/', views.remover_item_ficha, name='remover_item_ficha'),
+    path('ficha/peca/<int:peca_habilitada_id>/remover/', views.remover_peca_ficha, name='remover_peca_ficha'),
+
+    # ==================== RELATÓRIOS ========================
+    path('relatorios/operadores/', views.relatorios_producao, name='relatorios_producao'),
+    
     # ==================== HISTORICO ====================
     path('historico/fichas/', views.historico_fichas, name='historico_fichas'),
     path('historico/fichas/<int:usuario_id>/', views.historico_ficha_usuario, name='historico_fichas_usuario'),

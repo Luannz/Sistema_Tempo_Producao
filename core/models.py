@@ -120,6 +120,13 @@ class Ficha(models.Model):
     data_criacao = models.DateField(auto_now_add=True)
     criado_em = models.DateTimeField(auto_now_add=True)
 
+    total_planejado = models.PositiveIntegerField(
+        null=True, 
+        blank=True, 
+        verbose_name="Total Planejado Geral",
+        help_text="Quantidade total planejada para fichas numeradas."
+    )
+
     def __str__(self):
         return f"Ficha #{self.pk} - {self.usuario} ({self.data_criacao:%d/%m/%Y})"
 

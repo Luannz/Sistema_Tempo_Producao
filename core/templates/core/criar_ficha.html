@@ -41,6 +41,17 @@
           {% endfor %}
         </div>
 
+        {# ===== CAMPO TOTAL PLANEJADO (EXIBIDO APENAS SE FOR NUMERADA) ===== #}
+        <div class="mb-3 d-none" id="divTotalPlanejado">
+          <label class="form-label small text-uppercase mono text-secondary fw-semibold">
+            Total Planejado Geral (Pares/Peças)
+          </label>
+          {{ form.total_planejado }}
+          {% for error in form.total_planejado.errors %}
+            <div class="text-danger small mt-1">{{ error }}</div>
+          {% endfor %}
+        </div>
+
         {# ===== SELEÇÃO DO OPERADOR ===== #}
         <div class="mb-4">
           <label class="form-label small text-uppercase mono text-secondary fw-semibold">Operador Responsável</label>
@@ -94,7 +105,30 @@
 
 {% block extra_js %}
 <script>
-  // Trava o botão assim que envia pra evitar duplo toque criando duas fichas
+  document.addEventListener("DOMContentLoaded", function () {
+    const radioTipos = document.querySelectorAll('input[name="tipo"]');
+    const divTotalPlanejado = document.getElementById('divTotalPlanejado');
+    const inputTotalPlanejado = document.querySelector('input[name="total_planejado"]');
+
+    function toggleTotalPlanejado() {
+      const selected = document.querySelector('input[name="tipo"]:checked');
+      if (selected && selected.value === 'numerada') {
+        divTotalPlanejado.classList.remove('d-none');
+        if (inputTotalPlanejado) inputTotalPlanejado.required = true;
+      } else {
+        divTotalPlanejado.classList.add('d-none');
+        if (inputTotalPlanejado) {
+          inputTotalPlanejado.required = false;
+          inputTotalPlanejado.value = '';
+        }
+      }
+    }
+
+    radioTipos.forEach(radio => radio.addEventListener('change', toggleTotalPlanejado));
+    toggleTotalPlanejado(); // Executa ao carregar para manter o estado em caso de erro de validação
+  });
+
+  // Trava o botão no envio para evitar múltiplos cliques
   document.getElementById('formCriarFicha')?.addEventListener('submit', function () {
     document.getElementById('btnCriarFicha').disabled = true;
   });

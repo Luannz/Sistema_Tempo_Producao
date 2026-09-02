@@ -56,6 +56,22 @@
     border: 1px solid #fcd34d;  /* Borda suave */
     font-weight: 600;
   }
+
+  /* Badge em andamento: Fundo laranja bem claro, texto e borda no laranja da marca */
+  .badge-progresso {
+    background-color: rgba(232, 98, 44, 0.12) !important;
+    color: var(--amber-600, #d9531e) !important;
+    border: 1px solid var(--amber-500, #e8622c) !important;
+    font-weight: 600;
+  }
+
+  /* Badge concluído: Cinza/Grafite escuro elegante para destacar finalização */
+  .badge-concluido {
+    background-color: var(--graphite-950, #1a1d20) !important;
+    color: #ffffff !important;
+    border: 1px solid var(--graphite-950, #1a1d20) !important;
+    font-weight: 600;
+  }
 </style>
 {% endblock %}
 
@@ -63,8 +79,8 @@
 
 {# ===== CABEÇALHO COMPACTO ===== #}
 <div class="card p-3 mb-4 stat-card bg-white">
-  <div class="d-flex align-items-center justify-content-between flex-wrap gap-3">
-    <div class="d-flex align-items-center gap-3">
+  <div class="d-flex align-items-center justify-content-between flex-wrap gap-3 mb-3">
+    <div class="d-flex align-items-start gap-3">
       <div class="bg-dark text-white p-2.5 rounded text-center" style="min-width: 70px; background-color: var(--graphite-950) !important;">
         <span class="d-block text-uppercase text-muted small lh-1 mb-1" style="font-size: 0.65rem;">Ficha</span>
         <span class="mono fw-bold fs-4" style="color: var(--amber-500);">#{{ ficha.id }}</span>
@@ -100,6 +116,52 @@
         </div>
       </div>
     </div>
+
+    {% if ficha.tipo == 'numerada' and resumo_geral.total_planejado > 0 %}
+      <div>
+        <span class="badge {% if resumo_geral.concluido %}badge-concluido{% else %}badge-progresso{% endif %} px-3 py-2 fs-6">
+          <i class="fa-solid {% if resumo_geral.concluido %}fa-check-double text-success{% endif %} me-1"></i>
+          {{ resumo_geral.percentual_concluido }}% Concluído
+        </span>
+      </div>
+    {% endif %}
+  </div>
+
+  {# ===== MÉTRICAS RESUMIDAS DA FICHA ===== #}
+  <div class="row g-2 text-center pt-2 border-top">
+    <div class="col">
+      <div class="bg-light rounded p-2 border">
+        <span class="d-block text-muted small text-uppercase" style="font-size: 0.65rem;">Total Produzido</span>
+        <span class="fw-bold fs-5 text-dark">{{ resumo_geral.total_produzido }}</span>
+      </div>
+    </div>
+
+    <div class="col">
+      <div class="bg-light rounded p-2 border">
+        <span class="d-block text-muted small text-uppercase" style="font-size: 0.65rem;">Total Perdas</span>
+        <span class="fw-bold fs-5 {% if resumo_geral.total_perda > 0 %}text-danger{% else %}text-muted{% endif %}">
+          {{ resumo_geral.total_perda }}
+        </span>
+      </div>
+    </div>
+
+    {% if ficha.tipo == 'numerada' %}
+      <div class="col">
+        <div class="bg-light rounded p-2 border">
+          <span class="d-block text-muted small text-uppercase" style="font-size: 0.65rem;">Falta Produzir</span>
+          <span class="fw-bold fs-5 {% if resumo_geral.total_restante > 0 %}text-warning-emphasis{% else %}text-success{% endif %}">
+            {{ resumo_geral.total_restante }}
+          </span>
+        </div>
+      </div>
+
+      <div class="col">
+        <div class="bg-light rounded p-2 border">
+          <span class="d-block text-muted small text-uppercase" style="font-size: 0.65rem;">Total Planejado</span>
+          <span class="fw-bold fs-5 text-secondary">{{ resumo_geral.total_planejado }}</span>
+        </div>
+      </div>
+    {% endif %}
   </div>
 </div>
 

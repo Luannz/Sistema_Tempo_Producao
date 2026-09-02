@@ -48,7 +48,12 @@
 
               <td>
                 <span class="fw-medium text-dark">
-                  <i class="fa-solid fa-users me-1 text-muted"></i>{{ grupo.ficha.operador }}
+                  <i class="fa-solid fa-users me-1 text-muted"></i>
+                  {% if grupo.ficha.operador %}
+                    {{ grupo.ficha.operador.nome }}
+                  {% else %}
+                    <span class="text-muted fs-7">Não atribuído</span>
+                  {% endif %}
                 </span>
               </td>
 
@@ -78,7 +83,7 @@
                 <div class="d-flex align-items-center gap-3">
                   <div class="mono fw-bold text-dark fs-6">
                     {{ grupo.total_produzido }}
-                    {% if grupo.ficha.tipo == 'numerada' and grupo.total_planejado %}
+                    {% if grupo.ficha.tipo == 'numerada' and grupo.total_planejado > 0 %}
                       <span class="text-muted fw-normal" style="font-size: 0.85rem;">/ {{ grupo.total_planejado }}</span>
                     {% else %}
                       <span class="text-muted fw-normal" style="font-size: 0.75rem;">pares</span>
@@ -109,7 +114,7 @@
             </tr>
           {% empty %}
             <tr>
-              <td colspan="6" class="text-center py-5">
+              <td colspan="7" class="text-center py-5">
                 <div class="text-muted">
                   <i class="fa-solid fa-file-circle-plus fs-1 mb-3 text-secondary opacity-50 d-block"></i>
                   <p class="mb-1 display-font fs-5">NENHUMA FICHA ENCONTRADA</p>

@@ -18,6 +18,8 @@ from django.db.models.functions import Length
 import os
 import json
 
+from .services import filtrar_registros, processar_relatorio_operadores
+
 def login_view(request):
     if request.user.is_authenticated:
         return redirect('inicio')
@@ -57,6 +59,18 @@ def registrar_view(request):
         
     return render(request, 'core/registrar.html', {'form': form})
 
+def _formatar_tempo(minutos):
+    """Converte minutos (float/Decimal) em texto tipo '2h 15m' / '45m' / 'Concluído'."""
+    if minutos is None:
+        return None
+    minutos = round(float(minutos))
+    if minutos <= 0:
+        return "Concluído"
+    horas = minutos // 60
+    mins = minutos % 60
+    if horas > 0:
+        return f"{horas}h {mins:02d}m"
+    return f"{mins}m"
 
 # ==================== TELAS DE INICIO ====================
 
@@ -108,6 +122,7 @@ def inicio_supervisor(request):
     fichas_list = (
         Ficha.objects
         .filter(usuario=request.user)
+        .select_related('operador')
         .prefetch_related('itens__modelo', 'itens__registros', 'itens__pecas_habilitadas') 
         .order_by('-criado_em')
         .annotate(
@@ -123,25 +138,15 @@ def inicio_supervisor(request):
 
     fichas_resumo = []
     for ficha in fichas_page:
-        itens = []
-        total_produzido_ficha = 0
-        total_planejado_ficha = 0
+        # Soma TODA a produção realizada na ficha (tanto de modelos quanto de peças)
+        total_produzido_ficha = RegistroProducao.objects.filter(
+            item_ficha__ficha=ficha
+        ).aggregate(
+            total=Sum('quantidade_produzida')
+        )['total'] or 0
 
-        for item in ficha.itens.all():
-            produzido = item.registros.aggregate(
-                total=Sum('quantidade_produzida')
-            )['total'] or 0
-
-            total_produzido_ficha += produzido
-            if item.quantidade_planejada:
-                total_planejado_ficha += item.quantidade_planejada
-
-            itens.append({
-                'modelo': item.modelo,
-                'produzido': produzido,
-                'meta_hora': item.modelo.pares_por_hora,
-                'quantidade_planejada': item.quantidade_planejada,
-            })
+        # Pega o total planejado diretamente do campo da Ficha
+        total_planejado_ficha = ficha.total_planejado or 0
 
         pct_concluido = None
         if ficha.tipo == 'numerada' and total_planejado_ficha > 0:
@@ -149,9 +154,8 @@ def inicio_supervisor(request):
 
         fichas_resumo.append({
             'ficha': ficha,
-            'itens': itens,
-            'qtd_modelos': ficha.total_modelos, # <--- Vem do annotate!
-            'qtd_pecas': ficha.total_pecas,     # <--- Vem do annotate!
+            'qtd_modelos': ficha.total_modelos,
+            'qtd_pecas': ficha.total_pecas,
             'total_produzido': total_produzido_ficha,
             'total_planejado': total_planejado_ficha,
             'pct_concluido': pct_concluido,
@@ -160,7 +164,7 @@ def inicio_supervisor(request):
     return render(request, 'core/inicio_supervisor.html', {
         'fichas_resumo': fichas_resumo,
         'fichas_page': fichas_page,
-        'total_fichas': len(fichas_resumo),
+        'total_fichas': paginator.count,
     })
 
 # =================== SETORES E OPERADORES =====================
@@ -498,15 +502,15 @@ def detalhe_ficha(request, ficha_id):
     Tela de TRABALHO do supervisor — focado em registro rápido de produção.
     """
     ficha = get_object_or_404(
-    Ficha.objects
-    .select_related('usuario')
-    .prefetch_related(
-        'itens__modelo__pecas',
-        'itens__pecas_habilitadas__peca',
-        'itens__registros'
-    ),
-    pk=ficha_id
-)
+        Ficha.objects
+        .select_related('usuario', 'operador')
+        .prefetch_related(
+            'itens__modelo__pecas',
+            'itens__pecas_habilitadas__peca',
+            'itens__registros'
+        ),
+        pk=ficha_id
+    )
 
     if request.user.is_admin:
         return redirect('visualizar_ficha', ficha_id=ficha.id)
@@ -596,6 +600,31 @@ def detalhe_ficha(request, ficha_id):
             for h in pecas_habilitadas
         ]
 
+    # --- CÁLCULO DO TOTAL GERAL DA FICHA ---
+    totais_gerais = RegistroProducao.objects.filter(
+        item_ficha__ficha=ficha
+    ).aggregate(
+        total_produzido=Sum('quantidade_produzida'),
+        total_perda=Sum('quantidade_perda')
+    )
+
+    total_produzido_geral = totais_gerais['total_produzido'] or 0
+    total_perda_geral = totais_gerais['total_perda'] or 0
+    total_planejado = ficha.total_planejado or 0
+
+    eh_numerada = (ficha.tipo == 'numerada')
+    total_restante_geral = max(0, total_planejado - total_produzido_geral) if eh_numerada else None
+    percentual_concluido = round((total_produzido_geral / total_planejado) * 100) if (eh_numerada and total_planejado > 0) else 0
+
+    resumo_geral = {
+        'total_produzido': total_produzido_geral,
+        'total_perda': total_perda_geral,
+        'total_planejado': total_planejado,
+        'total_restante': total_restante_geral,
+        'percentual_concluido': percentual_concluido,
+        'concluido': (total_restante_geral == 0) if eh_numerada else False,
+    }
+
     # Últimos 10 lançamentos de produção
     ultimos_registros = (
         RegistroProducao.objects
@@ -628,6 +657,7 @@ def detalhe_ficha(request, ficha_id):
         'tempos_por_modelo': tempos_por_modelo,
         'metas_por_item': metas_por_item,
         'pecas_por_item': pecas_por_item,
+        'resumo_geral': resumo_geral,
     })
 
 @login_required
@@ -650,11 +680,21 @@ def visualizar_ficha(request, ficha_id):
     eh_numerada = ficha.tipo == 'numerada'
     itens_resumo = []
 
+    # Inicialização dos totais gerais da ficha
+    total_produzido_geral = 0
+    total_perda_geral = 0
+    total_planejado_geral = 0
+    total_tempo_restante_min = 0
+
     for item in ficha.itens.all():
         # --- CÁLCULO DO MODELO (REGISTROS SEM PEÇA) ---
         registros_modelo = [r for r in item.registros.all() if r.peca_id is None]
         produzido = sum(r.quantidade_produzida for r in registros_modelo)
         perda_modelo = sum(r.quantidade_perda for r in registros_modelo)
+
+        # Soma nos totais gerais
+        total_produzido_geral += produzido
+        total_perda_geral += perda_modelo
 
         # Ficha Numerada (Modelo)
         qtd_planejada = item.quantidade_planejada if eh_numerada else None
@@ -663,6 +703,11 @@ def visualizar_ficha(request, ficha_id):
         tempo_restante_min = item.tempo_restante_minutos(produzido) if eh_numerada else None
         tempo_restante_formatado = item.tempo_restante_formatado(produzido) if eh_numerada else None
 
+        if eh_numerada:
+            total_planejado_geral = ficha.total_planejado or 0
+        else:
+            total_planejado_geral = 0
+
         # --- CÁLCULO DAS PEÇAS ---
         pecas_resumo = []
         for habilitacao in item.pecas_habilitadas.all():
@@ -670,13 +715,22 @@ def visualizar_ficha(request, ficha_id):
             produzido_peca = sum(r.quantidade_produzida for r in registros_peca)
             perda_peca = sum(r.quantidade_perda for r in registros_peca)
 
+            # Soma das peças nos totais gerais
+            total_produzido_geral += produzido_peca
+            total_perda_geral += perda_peca
+
             qtd_planejada_peca = habilitacao.quantidade_planejada if eh_numerada else None
             qtd_restante_peca = habilitacao.qtd_restante(produzido_peca) if eh_numerada else None
             percentual_concluido_peca = habilitacao.percentual_concluido(produzido_peca) if eh_numerada else None
             tempo_restante_min_peca = habilitacao.tempo_restante_minutos(produzido_peca) if eh_numerada else None
             tempo_restante_formatado_peca = habilitacao.tempo_restante_formatado(produzido_peca) if eh_numerada else None
 
+            if eh_numerada:
+                total_planejado_geral += qtd_planejada_peca or 0
+                total_tempo_restante_min += tempo_restante_min_peca or 0
+
             pecas_resumo.append({
+                'id': habilitacao.id,
                 'peca': habilitacao.peca,
                 'produzido': produzido_peca,
                 'perda': perda_peca,
@@ -689,6 +743,7 @@ def visualizar_ficha(request, ficha_id):
             })
 
         itens_resumo.append({
+            'id': item.id,
             'item': item,
             'modelo': item.modelo,
             'produzido': produzido,
@@ -703,15 +758,25 @@ def visualizar_ficha(request, ficha_id):
             'pecas_resumo': pecas_resumo,
         })
 
-    # Registros ordenados pelo horário da baixa (do mais recente ao mais antigo)
-    registros_query = (
-        RegistroProducao.objects
-        .filter(item_ficha__ficha=ficha)
-        .select_related('item_ficha__modelo', 'peca')
-        .order_by('-registrado_em')
-    )
+    # Métricas finais do resumo total
+    total_restante_geral = max(0, total_planejado_geral - total_produzido_geral) if eh_numerada else None
+    percentual_total_geral = round((total_produzido_geral / total_planejado_geral) * 100) if (eh_numerada and total_planejado_geral > 0) else 0
 
-    # Registros ordenados pelo horário da baixa
+    # Formatação do tempo restante acumulado (em horas e minutos)
+    horas_totais = total_tempo_restante_min // 60
+    minutos_totais = total_tempo_restante_min % 60
+    tempo_restante_total_formatado = f"{horas_totais}h {minutos_totais}min" if horas_totais > 0 else f"{minutos_totais}min"
+
+    resumo_geral = {
+        'total_produzido': total_produzido_geral,
+        'total_perda': total_perda_geral,
+        'total_planejado': total_planejado_geral,
+        'total_restante': total_restante_geral,
+        'percentual_concluido': percentual_total_geral,
+        'tempo_restante_formatado': tempo_restante_total_formatado,
+        'concluido': (total_restante_geral == 0) if eh_numerada else False,
+    }
+
     registros_query = (
         RegistroProducao.objects
         .filter(item_ficha__ficha=ficha)
@@ -721,20 +786,53 @@ def visualizar_ficha(request, ficha_id):
 
     registros = []
     for reg in registros_query:
-        # Monta o rótulo do Item / Peça
         if reg.peca:
             reg.item_rotulo = f"{reg.item_ficha.modelo.numero} - {reg.peca.nome}"
         else:
             reg.item_rotulo = f"{reg.item_ficha.modelo.numero} (Nº{reg.item_ficha.numeracao})"
-
         registros.append(reg)
 
     return render(request, 'core/visualizar_ficha.html', {
         'ficha': ficha,
         'itens_resumo': itens_resumo,
+        'resumo_geral': resumo_geral,
         'registros': registros,
     })
 
+@login_required
+def remover_item_ficha(request, item_id):
+    """Remove o modelo (ItemFicha) inteiro da ficha."""
+    if not request.user.is_admin:
+        messages.error(request, "Ação permitida apenas para administradores.")
+        return redirect('inicio_supervisor')
+
+    item = get_object_or_404(ItemFicha, pk=item_id)
+    ficha_id = item.ficha_id
+    modelo_nome = item.modelo.numero
+
+    # Remove o ItemFicha (e em cascata os registros/peças atrelados a ele)
+    item.delete()
+
+    messages.success(request, f"Modelo {modelo_nome} foi removido da ficha com sucesso.")
+    return redirect('visualizar_ficha', ficha_id=ficha_id)
+
+
+@login_required
+def remover_peca_ficha(request, peca_habilitada_id):
+    """Remove apenas a peça (ItemFichaPeca) do modelo."""
+    if not request.user.is_admin:
+        messages.error(request, "Ação permitida apenas para administradores.")
+        return redirect('inicio_supervisor')
+
+    habilitacao = get_object_or_404(ItemFichaPeca, pk=peca_habilitada_id)
+    ficha_id = habilitacao.item_ficha.ficha_id
+    peca_nome = habilitacao.peca.nome
+
+    # Remove apenas a vinculação da peça na ficha
+    habilitacao.delete()
+
+    messages.success(request, f"Peça '{peca_nome}' foi removida com sucesso.")
+    return redirect('visualizar_ficha', ficha_id=ficha_id)
 
 @login_required
 def historico_fichas(request):
@@ -850,3 +948,27 @@ def historico_ficha_usuario(request, usuario_id):
         'data_filtro': data_filtro,
         'tipo_filtro': tipo_filtro,
     })
+
+# ================= RELATÓRIOS =====================
+
+@login_required
+def relatorios_producao(request):
+    registros_qs, filtros = filtrar_registros(request)
+
+    # Pega a página atual da URL (padrão = 1)
+    page_number = request.GET.get("page", 1)
+
+    # O service processa APENAS os 10 operadores daquela página
+    dados_resumo, pagina_operadores = processar_relatorio_operadores(
+        registros_qs, page=page_number, per_page=10
+    )
+
+    context = {
+        "relatorio_operadores": dados_resumo,
+        "pagina_operadores": pagina_operadores,  # Objeto Paginator para usar os botões no HTML
+        "filtros": filtros,
+        "setores": Setor.objects.all().order_by("nome"),
+        "operadores": Operador.objects.all().order_by("nome"),
+    }
+
+    return render(request, "core/relatorios_producao.html", context)

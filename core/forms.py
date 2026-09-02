@@ -141,17 +141,24 @@ class FichaForm(forms.ModelForm):
 
     class Meta:
         model = Ficha
-        fields = ['tipo', 'operador']
+        fields = ['tipo', 'operador', 'total_planejado']
         labels = {'tipo': 'Tipo de ficha'}
         widgets = {
             'tipo': forms.RadioSelect,
             'operador': forms.Select(attrs={'class': 'form-select'}),
+            'total_planejado': forms.NumberInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Ex: 500',
+                'min': '1'
+            }),
         }
 
     def __init__(self, *args, **kwargs):
         user = kwargs.pop('user', None)
         super().__init__(*args, **kwargs)
 
+        # Opcional por padrão na declaração do campo; a obrigatoriedade é tratada no clean()
+        self.fields['total_planejado'].required = False
         # Base: apenas operadores ativos com prefetch do setor
         queryset = Operador.objects.filter(ativo=True).select_related('setor')
 
@@ -167,6 +174,24 @@ class FichaForm(forms.ModelForm):
         self.fields['operador'].error_messages = {
             'required': 'Por favor, selecione o operador responsável antes de continuar.'
         }
+
+    def clean(self):
+        cleaned_data = super().clean()
+        tipo = cleaned_data.get('tipo')
+        total_planejado = cleaned_data.get('total_planejado')
+
+        # Validação condicional: se for NUMERADA, exige o total_planejado
+        if tipo == Ficha.Tipo.NUMERADA:
+            if not total_planejado:
+                self.add_error('total_planejado', 'Informe a quantidade total planejada para fichas numeradas.')
+            elif total_planejado <= 0:
+                self.add_error('total_planejado', 'O total planejado deve ser maior que zero.')
+
+        # Se for PADRÃO, limpa o campo garantindo que fique NULL no banco
+        elif tipo == Ficha.Tipo.PADRAO:
+            cleaned_data['total_planejado'] = None
+
+        return cleaned_data
 
 
 class ItemFichaForm(forms.ModelForm):
