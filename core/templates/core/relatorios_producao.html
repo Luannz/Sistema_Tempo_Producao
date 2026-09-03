@@ -211,33 +211,56 @@
   {% if pagina_operadores.has_other_pages %}
     <div class="card-footer bg-white border-top d-flex justify-content-between align-items-center py-2">
       <small class="mono text-muted" style="font-size: 0.75rem;">
-        EXIBINDO {{ pagina_operadores.start_index }}-{{ pagina_operadores.end_index }} DE {{ pagina_operadores.paginator.count }}
+        EXIBINDO {{ pagina_operadores.start_index }}-{{ pagina_operadores.end_index }} DE {{ pagina_operadores.paginator.count }} OPERADORES
       </small>
       
       <ul class="pagination pagination-sm mb-0">
+        {# --- BOTÃO ANTERIOR --- #}
         {% if pagina_operadores.has_previous %}
           <li class="page-item">
-            <a class="page-link text-dark" href="?page={{ pagina_operadores.previous_page_number }}{% if filtros.data_inicio %}&data_inicio={{ filtros.data_inicio }}{% endif %}{% if filtros.data_fim %}&data_fim={{ filtros.data_fim }}{% endif %}{% if filtros.setor_id %}&setor={{ filtros.setor_id }}{% endif %}{% if filtros.operador_id %}&operador={{ filtros.operador_id }}{% endif %}">Anterior</a>
+            <a class="page-link text-dark" href="?page={{ pagina_operadores.previous_page_number }}{% if filtros.data %}&data={{ filtros.data }}{% endif %}{% if filtros.setor_id %}&setor={{ filtros.setor_id }}{% endif %}{% if filtros.operador_id %}&operador={{ filtros.operador_id }}{% endif %}">Anterior</a>
           </li>
         {% else %}
           <li class="page-item disabled"><span class="page-link">Anterior</span></li>
         {% endif %}
 
+        {# --- PRIMEIRA PÁGINA (Se estiver muito distante) --- #}
+        {% if pagina_operadores.number > 3 %}
+          <li class="page-item">
+            <a class="page-link text-dark" href="?page=1{% if filtros.data %}&data={{ filtros.data }}{% endif %}{% if filtros.setor_id %}&setor={{ filtros.setor_id }}{% endif %}{% if filtros.operador_id %}&operador={{ filtros.operador_id }}{% endif %}">1</a>
+          </li>
+          {% if pagina_operadores.number > 4 %}
+            <li class="page-item disabled"><span class="page-link">...</span></li>
+          {% endif %}
+        {% endif %}
+
+        {# --- PÁGINAS INTERMEDIÁRIAS --- #}
         {% for num in pagina_operadores.paginator.page_range %}
           {% if pagina_operadores.number == num %}
             <li class="page-item active">
-              <span class="page-link" style="background: var(--amber-500); border-color: var(--amber-500); color: var(--graphite-950); font-weight: bold;">{{ num }}</span>
+              <span class="page-link" style="background: var(--amber-500, #ffc107); border-color: var(--amber-500, #ffc107); color: var(--graphite-950, #212529); font-weight: bold;">{{ num }}</span>
             </li>
           {% elif num > pagina_operadores.number|add:'-3' and num < pagina_operadores.number|add:'3' %}
             <li class="page-item">
-              <a class="page-link text-dark" href="?page={{ num }}{% if filtros.data_inicio %}&data_inicio={{ filtros.data_inicio }}{% endif %}{% if filtros.data_fim %}&data_fim={{ filtros.data_fim }}{% endif %}{% if filtros.setor_id %}&setor={{ filtros.setor_id }}{% endif %}{% if filtros.operador_id %}&operador={{ filtros.operador_id }}{% endif %}">{{ num }}</a>
+              <a class="page-link text-dark" href="?page={{ num }}{% if filtros.data %}&data={{ filtros.data }}{% endif %}{% if filtros.setor_id %}&setor={{ filtros.setor_id }}{% endif %}{% if filtros.operador_id %}&operador={{ filtros.operador_id }}{% endif %}">{{ num }}</a>
             </li>
           {% endif %}
         {% endfor %}
 
+        {# --- ÚLTIMA PÁGINA (Se estiver muito distante) --- #}
+        {% if pagina_operadores.number < pagina_operadores.paginator.num_pages|add:'-2' %}
+          {% if pagina_operadores.number < pagina_operadores.paginator.num_pages|add:'-3' %}
+            <li class="page-item disabled"><span class="page-link">...</span></li>
+          {% endif %}
+          <li class="page-item">
+            <a class="page-link text-dark" href="?page={{ pagina_operadores.paginator.num_pages }}{% if filtros.data %}&data={{ filtros.data }}{% endif %}{% if filtros.setor_id %}&setor={{ filtros.setor_id }}{% endif %}{% if filtros.operador_id %}&operador={{ filtros.operador_id }}{% endif %}">{{ pagina_operadores.paginator.num_pages }}</a>
+          </li>
+        {% endif %}
+
+        {# --- BOTÃO PRÓXIMO --- #}
         {% if pagina_operadores.has_next %}
           <li class="page-item">
-            <a class="page-link text-dark" href="?page={{ pagina_operadores.next_page_number }}{% if filtros.data_inicio %}&data_inicio={{ filtros.data_inicio }}{% endif %}{% if filtros.data_fim %}&data_fim={{ filtros.data_fim }}{% endif %}{% if filtros.setor_id %}&setor={{ filtros.setor_id }}{% endif %}{% if filtros.operador_id %}&operador={{ filtros.operador_id }}{% endif %}">Próximo</a>
+            <a class="page-link text-dark" href="?page={{ pagina_operadores.next_page_number }}{% if filtros.data %}&data={{ filtros.data }}{% endif %}{% if filtros.setor_id %}&setor={{ filtros.setor_id }}{% endif %}{% if filtros.operador_id %}&operador={{ filtros.operador_id }}{% endif %}">Próximo</a>
           </li>
         {% else %}
           <li class="page-item disabled"><span class="page-link">Próximo</span></li>
