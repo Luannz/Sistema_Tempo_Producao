@@ -17,14 +17,9 @@
   <div class="card p-3 mb-4 bg-white border">
     <form method="GET" class="row g-3 align-items-end">
       
-      <div class="col-md-2">
-        <label class="form-label small fw-semibold text-muted">Data Inicial</label>
-        <input type="date" name="data_inicio" class="form-control" value="{{ filtros.data_inicio }}">
-      </div>
-
-      <div class="col-md-2">
-        <label class="form-label small fw-semibold text-muted">Data Final</label>
-        <input type="date" name="data_fim" class="form-control" value="{{ filtros.data_fim }}">
+      <div class="col-md-3">
+        <label class="form-label small fw-semibold text-muted">Data da Produção</label>
+        <input type="date" name="data" class="form-control" value="{{ filtros.data }}">
       </div>
 
       <div class="col-md-3">
@@ -97,7 +92,13 @@
                   <tbody>
                     {% for mod in item.resumo_modelos %}
                       <tr>
-                        <td class="fw-bold text-dark">{{ mod.modelo }}</td>
+                        <td class="fw-bold text-dark">
+                          {% if mod.peca and mod.peca != "Sem Peça" %}
+                            {{ mod.modelo }} - {{ mod.peca }}
+                          {% else %}
+                            {{ mod.modelo }}
+                          {% endif %}
+                        </td>
                         <td class="text-center">{{ mod.numero }}</td>
                         <td class="text-end fw-bold text-success">{{ mod.produzido }}</td>
                       </tr>
@@ -121,72 +122,73 @@
               </div>
             </div>
 
-            {# Linha de Total Geral do Operador #}
-            <div class="p-2 mb-3 bg-light rounded border">
-              <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
-                <span class="fw-bold text-dark small text-uppercase">
-                  <i class="fa-solid fa-calculator me-1"></i> Total Geral do Operador
-                </span>
-                <div class="d-flex gap-3 flex-wrap">
-                  <span class="small text-muted">Produzido: <strong class="text-success">{{ item.total_produzido }}</strong></span>
-                  <span class="small text-muted">Perda: <strong class="text-danger">{{ item.total_perda }}</strong></span>
-                </div>
-              </div>
-
-              {% if item.tem_planejamento %}
-                <hr class="my-2">
-                <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
-                  <span class="small text-muted">
-                    Planejado: <strong class="text-secondary">{{ item.total_planejado }}</strong>
-                  </span>
-                  <span class="small text-muted">
-                    Restante: <strong class="{% if item.total_restante > 0 %}text-warning-emphasis{% else %}text-success{% endif %}">
-                      {{ item.total_restante }}
-                    </strong>
-                  </span>
-                  <span class="small text-muted">
-                    Progresso:
-                    <span class="badge {% if item.concluido %}bg-success{% else %}bg-primary-subtle text-primary{% endif %}">
-                      {{ item.percentual_concluido }}%
-                    </span>
-                  </span>
-                  <span class="small text-muted">
-                    Tempo estimado p/ terminar: <strong>{{ item.tempo_restante_formatado }}</strong>
-                  </span>
-                </div>
-              {% endif %}
-            </div>
-
-            {# Tabela 2: Resumo de Produção Agrupada por Hora #}
+            
+            {# Tabela 2: Resumo de Produção por Hora Detalhado #}
             <h6 class="card-header-title text-muted fs-7 mb-2">
-              <i class="fa-solid fa-clock me-1"></i> Produção Agrupada de Hora em Hora
+              <i class="fa-solid fa-clock me-1"></i> Apontamentos por Hora
             </h6>
-            <div class="table-responsive" style="max-height: 220px; overflow-y: auto;">
-              <table class="table table-sm table-hover border mb-0" style="font-size: 0.8rem;">
+            <div class="table-responsive" style="max-height: 280px; overflow-y: auto;">
+              <table class="table table-sm table-hover border mb-0 align-middle" style="font-size: 0.8rem;">
                 <thead class="table-light sticky-top">
                   <tr>
-                    <th>Faixa de Horário</th>
-                    <th class="text-center">Lançamentos</th>
-                    <th class="text-end">Produção</th>
-                    <th class="text-end">Baixas</th>
-                    <th class="text-end">Total Faixa</th>
+                    <th style="width: 80px;">Hora</th>
+                    <th>Modelo / Peça</th>
+                    <th class="text-end" style="width: 100px;">Prod/H</th>
+                    <th class="text-end" style="width: 80px;">Perda</th>
+                    <th class="text-end" style="width: 90px;">Produzido</th>
+                    <th class="text-end" style="width: 100px;">Diferença.T</th>
+                    <th class="text-center" style="width: 90px;">Status</th>
                   </tr>
                 </thead>
                 <tbody>
                   {% for hora in item.baixas_por_hora %}
                     <tr>
-                      <td class="mono fw-semibold text-dark">{{ hora.intervalo_hora }}</td>
-                      <td class="text-center mono text-muted">{{ hora.qtd_apontamentos }}</td>
-                      <td class="text-end mono fw-bold text-success">+{{ hora.produzido }}</td>
-                      <td class="text-end mono fw-bold text-danger">
-                        {% if hora.perda > 0 %}-{{ hora.perda }}{% else %}0{% endif %}
+                      <!-- Hora -->
+                      <td class="mono fw-semibold text-dark">
+                        {{ hora.hora }}
                       </td>
-                      <!-- Total exibindo apenas o produzido -->
-                      <td class="text-end mono fw-bold text-dark">{{ hora.produzido }}</td>
+
+                      <!-- Modelo / Peça -->
+                      <td class="fw-semibold">
+                        {{ hora.modelo_peca }}
+                      </td>
+
+                      <!-- Prod/H -->
+                      <td class="text-end mono">
+                        {{ hora.prod_h|floatformat:1 }} bat/h
+                      </td>
+
+                      <!-- Perda -->
+                      <td class="text-end mono fw-bold text-danger">
+                        {{ hora.perda }}
+                      </td>
+
+                      <!-- Produzido -->
+                      <td class="text-end mono fw-bold text-dark">
+                        {{ hora.produzido }}
+                      </td>
+
+                      <!-- Diferença.T -->
+                      <td class="text-end mono fw-bold {% if hora.diferenca < 0 %}text-danger{% elif hora.diferenca > 0 %}text-success{% else %}text-muted{% endif %}">
+                        {% if hora.diferenca > 0 %}+{% endif %}{{ hora.diferenca|floatformat:1 }}
+                      </td>
+
+                      <!-- Status -->
+                      <td class="text-center">
+                        {% if hora.status == 'Abaixo' %}
+                          <span class="badge bg-danger-subtle text-danger border border-danger-subtle">Abaixo</span>
+                        {% elif hora.status == 'Na Meta' %}
+                          <span class="badge bg-info-subtle text-info border border-info-subtle">Na Meta</span>
+                        {% else %}
+                          <span class="badge bg-success-subtle text-success border border-success-subtle">Acima</span>
+                        {% endif %}
+                      </td>
                     </tr>
                   {% empty %}
                     <tr>
-                      <td colspan="5" class="text-center text-muted py-2">Nenhum apontamento por hora registrado.</td>
+                      <td colspan="8" class="text-center text-muted py-3">
+                        Nenhum apontamento por hora registrado neste período.
+                      </td>
                     </tr>
                   {% endfor %}
                 </tbody>
