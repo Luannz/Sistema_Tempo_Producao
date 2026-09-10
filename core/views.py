@@ -327,6 +327,29 @@ def cadastro_modelo(request):
     )
 
 @login_required
+def editar_modelo(request, modelo_id):
+    if not request.user.is_admin:
+        messages.error(request, "Apenas administradores podem alterar modelos.")
+        return redirect("inicio_supervisor")
+
+    modelo = get_object_or_404(Modelo, id=modelo_id)
+
+    if request.method == "POST":
+        novo_tempo = request.POST.get("tempo_fabricacao")
+        
+        if novo_tempo:
+            try:
+                modelo.tempo_fabricacao = float(novo_tempo.replace(',', '.'))
+                modelo.save()
+                messages.success(request, f"Tempo de fabricação do Modelo #{modelo.numero} atualizado com sucesso!")
+            except ValueError:
+                messages.error(request, "Por favor, insira um tempo de fabricação válido.")
+        else:
+            messages.error(request, "O tempo de fabricação não pode ser vazio.")
+
+    return redirect("cadastro_modelo")
+
+@login_required
 def alterar_status_modelo(request, modelo_id):
     if not request.user.is_admin:
         messages.error(request, "Ação não permitida.")
@@ -385,7 +408,7 @@ def cadastro_peca(request):
     # Busca todas as peças ordenadas
     pecas_list = Peca.objects.select_related("modelo").annotate(
         total_usos=Count("habilitacoes")
-    )
+    ).order_by("modelo__numero", "nome")  # Ordena por modelo e depois pelo nome da peça
 
     # Aplica o filtro de modelo se informado
     if modelo_id:
@@ -411,6 +434,44 @@ def cadastro_peca(request):
             "tempos_por_modelo": tempos_por_modelo,
         },
     )
+
+
+@login_required
+def editar_peca(request, peca_id):
+    if not request.user.is_admin:
+        messages.error(request, "Ação não permitida.")
+        return redirect("cadastro_peca")
+
+    peca = get_object_or_404(Peca, pk=peca_id)
+
+    if request.method == "POST":
+        novo_tempo = request.POST.get("tempo_fabricacao")
+
+        if not novo_tempo:
+            messages.error(request, "Por favor, preencha todos os campos corretamente.")
+            return redirect("cadastro_peca")
+
+        try:
+            from decimal import Decimal
+            tempo_dec = Decimal(str(novo_tempo).replace(",", "."))
+
+            # Valida se o tempo da peça não ultrapassa o tempo limite do modelo
+            if peca.modelo and tempo_dec > peca.modelo.tempo_fabricacao:
+                messages.error(
+                    request,
+                    f"O tempo da peça ({tempo_dec} min) não pode ser superior ao tempo do modelo ({peca.modelo.tempo_fabricacao} min)."
+                )
+                return redirect("cadastro_peca")
+
+            peca.tempo_fabricacao = tempo_dec
+            peca.save()
+
+            messages.success(request, f"Peça '{peca.nome}' atualizada com sucesso!")
+
+        except Exception as e:
+            messages.error(request, f"Erro ao atualizar a peça: {str(e)}")
+
+    return redirect("cadastro_peca")
 
 @login_required
 def alterar_status_peca(request, peca_id):

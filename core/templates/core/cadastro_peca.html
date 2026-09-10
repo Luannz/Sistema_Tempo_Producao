@@ -136,10 +136,11 @@
                 </td>
               </tr>
 
-              {# ===== MODAL DE GERENCIAMENTO ===== #}
+              {# ===== MODAL DE GERENCIAMENTO DA PEÇA ===== #}
               <div class="modal fade" id="modalPeca{{ peca.id }}" tabindex="-1" aria-hidden="true">
                 <div class="modal-dialog modal-dialog-centered">
                   <div class="modal-content border-0 shadow">
+                    
                     <div class="modal-header py-2 bg-dark border-bottom" style="border-color: var(--amber-500) !important;">
                       <h6 class="modal-title display-font fw-bold text-white text-uppercase" style="letter-spacing: 0.05em;">
                         <i class="fa-solid fa-gear text-warning me-1"></i> Gerenciar Peça: {{ peca.nome }}
@@ -148,15 +149,40 @@
                     </div>
 
                     <div class="modal-body text-start py-3">
-                      {% if peca.total_usos > 0 %}
-                        <div class="alert alert-warning py-2 small mb-3 border-0 shadow-sm d-flex align-items-center gap-2">
-                          <i class="fa-solid fa-triangle-exclamation text-warning fs-5"></i>
-                          <span>Esta peça já foi adicionada em fichas de produção. Não é possível alterá-la ou excluí-la.</span>
+                      
+                      {# FORMULÁRIO DE EDIÇÃO (PERMITIDO SEMPRE) #}
+                      <form method="post" action="{% url 'editar_peca' peca.id %}" class="mb-4">
+                        {% csrf_token %}
+                        <h6 class="text-uppercase mono small fw-bold text-secondary mb-3 border-bottom pb-1">
+                          <i class="fa-solid fa-pen-to-square me-1"></i> Editar Dados
+                        </h6>
+
+                        <div class="mb-3">
+                          <label class="form-label small text-uppercase mono text-secondary fw-semibold">
+                            Tempo de Fabricação (min)
+                          </label>
+                          <input type="number" 
+                                 step="0.01" 
+                                 name="tempo_fabricacao" 
+                                 class="form-control form-control-sm mono" 
+                                 value="{{ peca.tempo_fabricacao|stringformat:'.2f' }}" 
+                                 max="{{ peca.modelo.tempo_fabricacao }}"
+                                 required>
+                          <div class="form-text small mono text-muted mt-1">
+                            Tempo máx. permitido: {{ peca.modelo.tempo_fabricacao }} min (Modelo #{{ peca.modelo.numero }}).
+                          </div>
                         </div>
-                      {% else %}
-                        <p class="small text-secondary mb-3">
-                          Selecione uma das ações abaixo para gerenciar esta peça:
-                        </p>
+
+                        <button type="submit" class="btn btn-warning btn-sm w-100 fw-bold">
+                          <i class="fa-solid fa-floppy-disk me-1"></i> Salvar Alterações
+                        </button>
+                      </form>             
+
+                      {% if peca.total_usos > 0 %}
+                        <div class="alert alert-warning py-2 small mb-3 border-0 shadow-sm d-flex align-items-center gap-2 border-top pb-1">
+                          <i class="fa-solid fa-circle-info text-warning fs-6"></i>
+                          <span>Esta peça está vinculada a fichas de produção. Ações de exclusão e alteração de status foram desabilitadas.</span>
+                        </div>
                       {% endif %}
 
                       <div class="d-flex flex-column gap-2">
@@ -178,6 +204,7 @@
                           </button>
                         </form>
                       </div>
+
                     </div>
 
                     <div class="modal-footer py-2 bg-light border-top">
@@ -201,6 +228,7 @@
           </tbody>
         </table>
       </div>
+
       {# ===== PAGINAÇÃO INDUSTRIAL ===== #}
       {% if pecas.has_other_pages %}
         <div class="card-footer bg-white border-top d-flex justify-content-between align-items-center py-2">
@@ -306,12 +334,11 @@
   }
 
   .badge-industrial-muted {
-    display: inline-flex;          /* Garante que altura/largura/bordas sejam respeitadas */
-    align-items: center;            /* Alinha o ícone e texto verticalmente */
+    display: inline-flex;
+    align-items: center;
     justify-content: center;
-    line-height: 1;                 /* Impede que a altura da linha do pai 'corte' a borda */
-    box-sizing: border-box;         /* Garante que a borda fique dentro do tamanho do elemento */
-    
+    line-height: 1;
+    box-sizing: border-box;
     background: var(--steel-100);
     color: var(--steel-500);
     border: 1px solid var(--steel-300);
@@ -320,7 +347,7 @@
     font-size: 0.7rem;
     letter-spacing: 0.05em;
     text-transform: uppercase;
-    padding: 0.35em 0.6em;         /* Ligeiro ajuste para respiro vertical */
+    padding: 0.35em 0.6em;
     border-radius: 2px;
   }
 </style>

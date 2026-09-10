@@ -20,10 +20,12 @@ urlpatterns = [
 
     # ==================== MODELOS E PECAS ====================
     path('modelos/cadastro/', views.cadastro_modelo, name='cadastro_modelo'),
+    path('modelos/<int:modelo_id>/editar/', views.editar_modelo, name='editar_modelo'),
     path('modelos/<int:modelo_id>/alterar_status/', views.alterar_status_modelo, name='alterar_status_modelo'),
     path('modelos/<int:modelo_id>/excluir/', views.excluir_modelo, name='excluir_modelo'),
     
     path('pecas/cadastro/', views.cadastro_peca, name='cadastro_peca'),
+    path("pecas/editar/<int:peca_id>/", views.editar_peca, name="editar_peca"),
     path('pecas/<int:peca_id>/status/', views.alterar_status_peca, name='alterar_status_peca'),
     path('pecas/<int:peca_id>/excluir/', views.excluir_peca, name='excluir_peca'),
 
