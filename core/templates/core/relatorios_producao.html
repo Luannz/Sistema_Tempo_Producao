@@ -138,6 +138,7 @@
                     <th class="text-end" style="width: 90px;">Produzido</th>
                     <th class="text-end" style="width: 100px;">Diferença.T</th>
                     <th class="text-center" style="width: 90px;">Status</th>
+                    <th class="text-end" style="width: 100px;">Produtividade</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -182,6 +183,11 @@
                         {% else %}
                           <span class="badge bg-success-subtle text-success border border-success-subtle">Acima</span>
                         {% endif %}
+                      </td>
+
+                      <!-- Produtividade -->
+                      <td class="text-end mono fw-bold {% if hora.produtividade < 100 %}text-danger{% elif hora.produtividade > 100 %}text-success{% else %}text-muted{% endif %}">
+                        {{ hora.produtividade|floatformat:1 }}%
                       </td>
                     </tr>
                   {% empty %}

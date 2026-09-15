@@ -264,6 +264,17 @@ class RegistroProducao(models.Model):
             hab = self.item_ficha.pecas_habilitadas.filter(peca_id=self.peca_id).first()
             return hab.quantidade_planejada if hab else None
         return self.item_ficha.quantidade_planejada
+
+    @property
+    def produtividade(self):
+        """
+        Retorna a produtividade em porcentagem (quantidade_produzida / meta_do_periodo * 100).
+        Retorna 0.0 se a meta do período for zero.
+        """
+        meta = self.meta_do_periodo
+        if meta and meta > 0:
+            return round((self.quantidade_produzida / meta) * 100, 1)
+        return 0.0
     
 
 class ItemFichaPeca(models.Model):

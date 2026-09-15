@@ -222,6 +222,8 @@ def _processar_dados_operador(registros):
             produzido = val["produzido"]
             diferenca = produzido - prod_h
 
+            produtividade = (produzido / prod_h * 100) if prod_h > 0 else 0.0
+
             if diferenca < 0:
                 status = "Abaixo"
             elif diferenca == 0:
@@ -246,6 +248,7 @@ def _processar_dados_operador(registros):
                     "produzido": produzido,
                     "diferenca": diferenca,
                     "status": status,
+                    "produtividade": produtividade,
                 }
             )
 

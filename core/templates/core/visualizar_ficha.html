@@ -297,6 +297,7 @@
             <th>Produzido</th>
             <th>Diferença</th>
             <th class="pe-3">Status</th>
+            <th>Produtividade</th>
           </tr>
         </thead>
         <tbody>
@@ -363,6 +364,17 @@
                 {% else %}
                   <span class="badge bg-danger-subtle text-danger border border-danger-subtle px-2 py-1">
                     <i class="fa-solid fa-xmark me-1"></i>Abaixo
+                  </span>
+                {% endif %}
+              </td>
+
+              {# 9. Produtividade #}
+              <td class="fw-bold mono">
+                {% if reg.quantidade_produzida == 0 and reg.quantidade_perda > 0 %}
+                  <span class="text-muted">0%</span>
+                {% else %}
+                  <span class="{% if reg.produtividade >= 100 %}text-success{% else %}text-danger{% endif %}">
+                    {{ reg.produtividade }}%
                   </span>
                 {% endif %}
               </td>
