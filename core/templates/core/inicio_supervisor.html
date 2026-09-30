@@ -6,24 +6,89 @@
 {% block content %}
 
   {# ===== CHAMADA PRINCIPAL: abrir nova ficha ===== #}
-  <div class="card p-4 mb-4" style="background: var(--graphite-950); border: none;">
-    <div class="d-flex align-items-center justify-content-between flex-wrap gap-3">
+  <div class="card p-3 p-md-4 mb-4" style="background: var(--graphite-950); border: none;">
+    {# Cabeçalho: Título e Botão Nova Ficha #}
+    <div class="d-flex align-items-center justify-content-between flex-wrap gap-3 mb-3 border-bottom border-secondary border-opacity-25 pb-3">
       <div>
-        <div class="text-white-50 small text-uppercase mono">{{ total_fichas_hoje }} ficha{{ total_fichas_hoje|pluralize }} aberta{{ total_fichas_hoje|pluralize }} hoje</div>
+        {% with qtd=total_fichas_hoje|default:total_fichas %}
+          <div class="text-white-50 small text-uppercase mono">
+            {{ qtd }} ficha{{ qtd|pluralize:"s" }} aberta{{ qtd|pluralize:"s" }}
+          </div>
+        {% endwith %}
         <h4 class="text-white display-font mb-0">Crie e visualize fichas</h4>
       </div>
-      <a href="{% url 'criar_ficha' %} " class="btn btn-signal btn-lg">
+      <a href="{% url 'criar_ficha' %}" class="btn btn-signal btn-lg">
         <i class="fa-solid fa-plus me-1"></i> Nova Ficha
       </a>
     </div>
+
+    {# Área de Filtros Compacta e Responsiva #}
+    <form method="GET" action="{% url 'inicio_supervisor' %}" class="d-flex align-items-center flex-wrap gap-2 gap-sm-3">
+      
+      {# Campo de Data mais compacto #}
+      <div class="d-flex align-items-center gap-2" style="max-width: 220px;">
+        <input type="date" 
+              id="id_data" 
+              name="data" 
+              value="{{ data_filtro }}" 
+              class="form-control form-control-dark form-control-sm"
+              {% if hoje_filtro == '1' %}disabled{% endif %}>
+      </div>
+
+      {# Checkbox em formato de Chip / Botão Alternador #}
+      <div>
+        <input type="checkbox" 
+              class="btn-check" 
+              name="hoje" 
+              value="1" 
+              id="checkHoje" 
+              autocomplete="off"
+              {% if hoje_filtro == '1' %}checked{% endif %}
+              onchange="this.form.submit()">
+        <label class="btn btn-sm btn-chip-dark d-inline-flex align-items-center gap-1" for="checkHoje">
+          <i class="fa-solid fa-clock-rotate-left small"></i>
+          <span>Hoje</span>
+        </label>
+      </div>
+
+      {# Botões de Ação #}
+      <div class="d-flex gap-2 ms-auto">
+        <button type="submit" class="btn btn-sm btn-outline-light px-3">
+          <i class="fa-solid fa-filter me-1"></i>Filtrar
+        </button>
+
+        {% if data_filtro or hoje_filtro %}
+          <a href="{% url 'inicio_supervisor' %}?limpar=1" 
+            class="btn btn-sm btn-outline-amber px-2 d-inline-flex align-items-center justify-content-center" 
+            title="Limpar Filtros">
+            <i class="fa-solid fa-xmark"></i>
+          </a>
+        {% endif %}
+      </div>
+
+    </form>
   </div>
 
   {# ===== LISTA DE FICHAS DO SUPERVISOR ===== #}
   <div class="card shadow-sm border-0">
-    <div class="card-header bg-white border-bottom py-3 d-flex justify-content-between align-items-center">
-      <h5 class="mb-0 display-font fw-bold text-uppercase text-dark" style="letter-spacing: 0.05em;">
-        <i class="fa-solid fa-list-check me-2 text-warning"></i> Histórico de Fichas
-      </h5>
+    <div class="card-header bg-white border-bottom py-3 d-flex justify-content-between align-items-center flex-wrap gap-2">
+      <div class="d-flex align-items-center flex-wrap gap-2">
+        <h5 class="mb-0 display-font fw-bold text-uppercase text-dark" style="letter-spacing: 0.05em;">
+          <i class="fa-solid fa-list-check me-2 text-warning"></i> Histórico de Fichas
+        </h5>
+
+        {# Indicador do Filtro Ativo #}
+        {% if hoje_filtro == '1' %}
+          <span class="badge bg-warning text-dark text-uppercase px-2 py-1 small fw-bold">
+            <i class="fa-solid fa-calendar-day me-1"></i> Exibindo somente fichas de hoje {% if data_formatada %}({{ data_formatada }}){% endif %}
+          </span>
+        {% elif data_filtro %}
+          <span class="badge bg-light text-dark border px-2 py-1 small fw-semibold">
+            <i class="fa-solid fa-filter me-1 text-secondary"></i> Exibindo data: {{ data_formatada }}
+          </span>
+        {% endif %}
+      </div>
+    </div>
     </div>
 
     <div class="table-responsive">
@@ -229,5 +294,85 @@
   .progress-industrial .progress-bar-ok {
     background-color: var(--ok-500);
   }
+
+  /* Input de data escuro e elegante */
+.form-control-dark {
+  background-color: rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: #fff;
+  border-radius: 6px;
+  font-size: 0.85rem;
+}
+
+.form-control-dark:focus {
+  background-color: rgba(255, 255, 255, 0.12);
+  border-color: var(--amber-500, #f59e0b);
+  color: #fff;
+  box-shadow: none;
+}
+
+.form-control-dark:disabled {
+  background-color: rgba(255, 255, 255, 0.02);
+  border-color: rgba(255, 255, 255, 0.05);
+  color: rgba(255, 255, 255, 0.2);
+  cursor: not-allowed;
+}
+
+.form-control-dark::-webkit-calendar-picker-indicator {
+  filter: invert(0.8);
+  cursor: pointer;
+}
+
+/* Chip / Checkbox estilizado */
+.btn-chip-dark {
+  background-color: rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: rgba(255, 255, 255, 0.7);
+  border-radius: 6px;
+  padding: 0.25rem 0.75rem;
+  font-size: 0.85rem;
+  transition: all 0.2s ease;
+}
+
+.btn-chip-dark:hover {
+  background-color: rgba(255, 255, 255, 0.12);
+  color: #fff;
+}
+
+/* Estado Ativo (quando marcado) */
+.btn-check:checked + .btn-chip-dark {
+  background-color: var(--amber-500, #f59e0b);
+  border-color: var(--amber-500, #f59e0b);
+  color: #000;
+  font-weight: 600;
+}
+
+.btn-outline-amber {
+  color: var(--amber-500, #f59e0b);
+  border: 1px solid var(--amber-500, #f59e0b);
+  background-color: transparent;
+  transition: all 0.2s ease-in-out;
+}
+
+.btn-outline-amber:hover {
+  background-color: var(--amber-500, #f59e0b);
+  color: #000;
+  border-color: var(--amber-500, #f59e0b);
+}
+
 </style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  function toggleDataInput(checkbox) {
+    const inputData = document.getElementById('id_data');
+    if (checkbox.checked) {
+      inputData.value = '';
+      inputData.disabled = true;
+    } else {
+      inputData.disabled = false;
+    }
+  }
+</script>
 {% endblock %}

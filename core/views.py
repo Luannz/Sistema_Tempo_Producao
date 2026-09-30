@@ -119,6 +119,24 @@ def inicio_administrador(request):
     
 @login_required
 def inicio_supervisor(request):
+    # Se o usuário clicou no botão de limpar filtros
+    if request.GET.get("limpar"):
+        request.session.pop("filtro_supervisor_data", None)
+        request.session.pop("filtro_supervisor_hoje", None)
+        data_str = ""
+        hoje_checked = ""
+    else:
+        # Se os parâmetros vieram na URL via GET, atualizamos a sessão
+        if "data" in request.GET or "hoje" in request.GET:
+            data_str = request.GET.get("data", "").strip()
+            hoje_checked = request.GET.get("hoje", "")
+            request.session["filtro_supervisor_data"] = data_str
+            request.session["filtro_supervisor_hoje"] = hoje_checked
+        else:
+            # Caso contrário, recuperamos os valores salvos da sessão
+            data_str = request.session.get("filtro_supervisor_data", "")
+            hoje_checked = request.session.get("filtro_supervisor_hoje", "")
+
     fichas_list = (
         Ficha.objects
         .filter(usuario=request.user)
@@ -131,6 +149,24 @@ def inicio_supervisor(request):
             total_pecas=Count('itens__pecas_habilitadas', distinct=True)
         )
     )
+
+    # LÓGICA DOS FILTROS DE DATA
+    data_filtro = ""
+    
+    # 1. Se o checkbox "hoje" estiver marcado
+    if hoje_checked in ["on", "true", "1"]:
+        hoje_date = timezone.now().date()
+        fichas_list = fichas_list.filter(criado_em__date=hoje_date)
+        data_filtro = hoje_date.strftime("%Y-%m-%d")
+        hoje_checked = "1"
+    # 2. Se informou uma data específica no input date
+    elif data_str:
+        try:
+            date_obj = datetime.strptime(data_str, "%Y-%m-%d").date()
+            fichas_list = fichas_list.filter(criado_em__date=date_obj)
+            data_filtro = data_str
+        except ValueError:
+            pass  # Caso a data fornecida venha em formato inválido
 
     paginator = Paginator(fichas_list, 10)
     page_number = request.GET.get('page')
@@ -161,10 +197,22 @@ def inicio_supervisor(request):
             'pct_concluido': pct_concluido,
         })
 
+    data_formatada = ""
+    if data_filtro:
+        try:
+            data_formatada = datetime.strptime(data_filtro, "%Y-%m-%d").strftime(
+                "%d/%m/%Y"
+            )
+        except ValueError:
+            data_formatada = data_filtro
+
     return render(request, 'core/inicio_supervisor.html', {
         'fichas_resumo': fichas_resumo,
         'fichas_page': fichas_page,
         'total_fichas': paginator.count,
+        'data_filtro': data_filtro,
+        'data_formatada': data_formatada,
+        'hoje_filtro': hoje_checked,
     })
 
 # =================== SETORES E OPERADORES =====================
@@ -863,37 +911,47 @@ def visualizar_ficha(request, ficha_id):
 @login_required
 def remover_item_ficha(request, item_id):
     """Remove o modelo (ItemFicha) inteiro da ficha."""
-    if not request.user.is_admin:
-        messages.error(request, "Ação permitida apenas para administradores.")
-        return redirect('inicio_supervisor')
-
     item = get_object_or_404(ItemFicha, pk=item_id)
     ficha_id = item.ficha_id
     modelo_nome = item.modelo.numero
 
-    # Remove o ItemFicha (e em cascata os registros/peças atrelados a ele)
-    item.delete()
+    # Executa a remoção apenas se for uma requisição POST
+    if request.method == 'POST':
+        item.delete()
+        messages.success(request, f"Modelo {modelo_nome} foi removido da ficha com sucesso.")
 
-    messages.success(request, f"Modelo {modelo_nome} foi removido da ficha com sucesso.")
-    return redirect('visualizar_ficha', ficha_id=ficha_id)
+    # 1. Tenta recarregar a mesma página onde o botão foi clicado
+    referer = request.META.get('HTTP_REFERER')
+    if referer:
+        return redirect(referer)
+
+    # 2. Fallback baseado no tipo de usuário
+    if request.user.tipo == 'admin':
+        return redirect('visualizar_ficha', ficha_id=ficha_id)
+    return redirect('detalhe_ficha', ficha_id=ficha_id)
 
 
 @login_required
 def remover_peca_ficha(request, peca_habilitada_id):
     """Remove apenas a peça (ItemFichaPeca) do modelo."""
-    if not request.user.is_admin:
-        messages.error(request, "Ação permitida apenas para administradores.")
-        return redirect('inicio_supervisor')
-
     habilitacao = get_object_or_404(ItemFichaPeca, pk=peca_habilitada_id)
     ficha_id = habilitacao.item_ficha.ficha_id
     peca_nome = habilitacao.peca.nome
 
-    # Remove apenas a vinculação da peça na ficha
-    habilitacao.delete()
+    # Remove apenas a vinculação da peça na ficha se for uma requisição POST
+    if request.method == 'POST':
+        habilitacao.delete()
+        messages.success(request, f"Peça '{peca_nome}' foi removida com sucesso.")
 
-    messages.success(request, f"Peça '{peca_nome}' foi removida com sucesso.")
-    return redirect('visualizar_ficha', ficha_id=ficha_id)
+    # 1. Tenta recarregar a mesma página onde o botão foi clicado
+    referer = request.META.get('HTTP_REFERER')
+    if referer:
+        return redirect(referer)
+
+    # 2. Fallback baseado no tipo de usuário
+    if request.user.tipo == 'admin':
+        return redirect('visualizar_ficha', ficha_id=ficha_id)
+    return redirect('detalhe_ficha', ficha_id=ficha_id)
 
 @login_required
 def historico_fichas(request):

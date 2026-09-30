@@ -152,12 +152,14 @@
 
                   <!-- BOTÃO DE REMOVER O MODELO (ADMIN) -->
                   {% if request.user.is_admin %}
-                    <a href="{% url 'remover_item_ficha' linha.id %}" 
-                      class="btn-close opacity-25 opacity-100-hover ms-1" 
-                      style="transform: scale(0.6);"
-                      title="Remover Modelo"
-                      onclick="return confirm('Tem certeza que deseja remover este modelo da ficha?');">
-                    </a>
+                    <form action="{% url 'remover_item_ficha' linha.item.id %}" method="POST" onsubmit="return confirm('Tem certeza que deseja remover este modelo da ficha?');" class="d-inline">
+                      {% csrf_token %}
+                      <button type="submit" 
+                              class="btn-close opacity-25 opacity-100-hover ms-1 border-0 p-0 align-middle" 
+                              style="transform: scale(0.6); background-color: transparent;" 
+                              title="Remover Modelo">
+                      </button>
+                    </form>
                   {% endif %}
                 </div>
               </div>
@@ -229,12 +231,14 @@
 
                         <!-- BOTÃO DE REMOVER A PEÇA (ADMIN) -->
                         {% if request.user.is_admin %}
-                          <a href="{% url 'remover_peca_ficha' linha_peca.id %}" 
-                            class="text-secondary text-decoration-none opacity-50 opacity-100-hover ms-1" 
-                            title="Remover Peça"
-                            onclick="return confirm('Tem certeza que deseja remover esta peça?');">
-                            <i class="fa-solid fa-minus" style="font-size: 0.65rem;"></i>
-                          </a>
+                          <form action="{% url 'remover_peca_ficha' linha_peca.id %}" method="POST" onsubmit="return confirm('Tem certeza que deseja remover esta peça?');" class="d-inline">
+                            {% csrf_token %}
+                            <button type="submit" 
+                                    class="btn btn-link text-secondary p-0 border-0 text-decoration-none opacity-50 opacity-100-hover ms-1 align-baseline" 
+                                    title="Remover Peça">
+                              <i class="fa-solid fa-minus" style="font-size: 0.65rem;"></i>
+                            </button>
+                          </form>
                         {% endif %}
                       </div>
                     </div>

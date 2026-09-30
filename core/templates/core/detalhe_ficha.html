@@ -72,6 +72,28 @@
     border: 1px solid var(--graphite-950, #1a1d20) !important;
     font-weight: 600;
   }
+
+  .btn-remover-sutil {
+    color: #a0aec0 !important;
+    transition: color 0.15s ease-in-out;
+  }
+  .btn-remover-sutil:hover {
+    color: #dc3545 !important; /* Destaca em vermelho no hover */
+  }
+
+  .btn-close-sutil {
+    background: transparent;
+    border: none;
+    padding: 0 2px;
+    color: #a0aec0;
+    cursor: pointer;
+    font-size: 0.8rem;
+    line-height: 1;
+    transition: color 0.15s ease-in-out;
+  }
+  .btn-close-sutil:hover {
+    color: #dc3545; /* Destaca em vermelho no hover */
+  }
 </style>
 {% endblock %}
 
@@ -382,7 +404,18 @@
                   {% endif %}
                 </div>
               </div>
-              <span class="badge bg-white text-dark border mono">Item #{{ linha.item.id }}</span>
+
+              <div class="d-flex align-items-center gap-2">
+                <span class="badge bg-white text-dark border mono">Item #{{ linha.item.id }}</span>
+                
+                {# BOTÃO PARA REMOVER O MODELO INTEIRO #}
+                <form action="{% url 'remover_item_ficha' linha.item.id %}" method="POST" onsubmit="return confirm('Deseja realmente remover o modelo {{ linha.modelo.numero }} da ficha?');" class="d-inline">
+                  {% csrf_token %}
+                  <button type="submit" class="btn btn-link text-muted p-0 border-0 ms-1 btn-remover-sutil" title="Remover Modelo" style="font-size: 0.85rem; line-height: 1;">
+                    <i class="fa-regular fa-trash-can"></i>
+                  </button>
+                </form>
+              </div>
             </div>
 
             {# Peças Habilitadas #}
@@ -405,6 +438,14 @@
                           <span class="text-danger">/ Perda: <strong class="text-dark">{{ peca_hab.total_perda }}</strong></span>
                         {% endif %}
                       {% endif %}
+
+                      {# BOTÃO PARA REMOVER A PEÇA HABILITADA #}
+                      <form action="{% url 'remover_peca_ficha' peca_hab.id %}" method="POST" onsubmit="return confirm('Deseja remover a peça {{ peca_hab.peca.nome }}?');" class="d-inline ms-1">
+                        {% csrf_token %}
+                        <button type="submit" class="btn-close-sutil" title="Remover Peça">
+                          <i class="fa-solid fa-xmark"></i>
+                        </button>
+                      </form>
                     </span>
                   {% endfor %}
                 </div>
