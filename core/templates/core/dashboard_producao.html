@@ -80,8 +80,12 @@
                             {% for h in faixas %}
                                 <th class="text-center col-hora">{{ h|stringformat:"02d" }}h</th>
                             {% endfor %}
-                            <th class="text-center col-resumo">Produzido</th>
-                            <th class="text-center col-resumo">Planejado</th>
+                            <th class="text-center col-resumo" title="Produzido">
+                                <span class="lbl-full">Produzido</span><span class="lbl-abrev">Prod</span>
+                            </th>
+                            <th class="text-center col-resumo" title="Planejado">
+                                <span class="lbl-full">Planejado</span><span class="lbl-abrev">Plan</span>
+                            </th>
                             <th class="text-center col-perc">% Cumprido</th>
                         </tr>
                     </thead>
@@ -89,8 +93,8 @@
                         {% for l in linhas %}
                         <tr>
                             <td class="col-operador">
-                                <div class="fw-bold">{{ l.nome }}</div>
-                                <div class="small text-muted">{{ l.setor }}</div>
+                                <div class="fw-bold text-truncate" title="{{ l.nome }}">{{ l.nome }}</div>
+                                <div class="small text-muted text-truncate">{{ l.setor }}</div>
                             </td>
 
                             {% for c in l.celulas %}
@@ -175,59 +179,65 @@
 .quadro-header {
     background: var(--graphite-950, #18181b);
     color: #fff;
-    padding: 0.9rem 1.25rem;
+    padding: 0.75rem 1rem;
 }
 
+/* Largura fixa: as colunas de hora dividem o espaço que sobrar */
 .quadro-table {
-    font-size: 1rem;
+    table-layout: fixed;
+    width: 100%;
+    font-size: 0.95rem;
     --bs-table-bg: #fff;
 }
 
-/* Cabeçalho da tabela */
+/* Cabeçalho */
 .quadro-table thead th {
     background: #27272a;
     color: #fff;
-    font-size: 0.78rem;
+    font-size: 0.72rem;
     font-weight: 600;
     text-transform: uppercase;
-    letter-spacing: 0.06em;
-    padding: 0.85rem 0.75rem;
+    letter-spacing: 0.04em;
+    padding: 0.65rem 0.25rem;
     border-bottom: 3px solid var(--amber-500, #f59e0b);
     white-space: nowrap;
 }
 
 /* Linhas */
 .quadro-table tbody td {
-    padding: 0.9rem 0.75rem;
+    padding: 0.55rem 0.25rem;
     border-bottom: 1px solid #eef0f2;
 }
 .quadro-table tbody tr:nth-child(even) td { background: #fafafa; }
 .quadro-table tbody tr:hover td { background: #fff8e6; }
 
-/* Coluna do operador fixa ao rolar para o lado */
+/* Colunas: só o operador e o resumo têm largura definida */
 .col-operador {
     position: sticky;
     left: 0;
     z-index: 1;
-    min-width: 190px;
+    width: 160px;
+    padding-left: 0.75rem !important;
     border-right: 1px solid #e5e7eb;
 }
 .quadro-table thead .col-operador { background: #27272a; z-index: 2; }
-.quadro-table tbody .col-operador { background: inherit; }
 .quadro-table tbody tr td.col-operador { background: #fff; }
 .quadro-table tbody tr:nth-child(even) td.col-operador { background: #fafafa; }
 .quadro-table tbody tr:hover td.col-operador { background: #fff8e6; }
 
-/* Horas: números grandes, vazio apagado */
-.col-hora { min-width: 70px; }
+.col-resumo { width: 90px; font-variant-numeric: tabular-nums; }
+.col-perc   { width: 115px; padding-left: 0.4rem !important; padding-right: 0.4rem !important; }
+/* .col-hora fica sem largura: divide igualmente o espaço restante */
 
-/* Célula de hora colorida pela meta */
+/* Células de hora */
+.celula-vazia { color: #d4d4d8; font-size: 1rem; }
+
 .hora-chip {
     display: inline-block;
-    min-width: 52px;
-    padding: 0.25rem 0.6rem;
-    border-radius: 8px;
-    font-size: 1.15rem;
+    min-width: 0;
+    padding: 0.15rem 0.45rem;
+    border-radius: 7px;
+    font-size: 1.05rem;
     font-weight: 700;
     font-variant-numeric: tabular-nums;
     border: 1px solid transparent;
@@ -237,27 +247,19 @@
 .hora-ruim    { background: #fee2e2; color: #991b1b; border-color: #fca5a5; }
 .hora-neutro  { background: #f4f4f5; color: #3f3f46; border-color: #e4e4e7; }
 
-.celula-vazia {
-    color: #d4d4d8;
-    font-size: 1.1rem;
-}
-
 /* Resumo */
-.col-resumo { min-width: 110px; font-variant-numeric: tabular-nums; }
 .total-prod {
-    font-size: 1.3rem;
+    font-size: 1.15rem;
     font-weight: 800;
     background: #fffbeb !important;
     border-left: 1px solid #fde68a;
 }
-.quadro-table thead .col-resumo:first-of-type { border-left: 1px solid #3f3f46; }
 
 /* % cumprido com barra */
-.col-perc { min-width: 140px; }
-.perc-valor { font-size: 1.15rem; font-weight: 800; line-height: 1.1; }
+.perc-valor { font-size: 1.05rem; font-weight: 800; line-height: 1.1; }
 .perc-barra {
-    height: 6px;
-    margin-top: 4px;
+    height: 5px;
+    margin-top: 3px;
     background: #e5e7eb;
     border-radius: 999px;
 }
@@ -267,10 +269,47 @@
     background: #27272a;
     color: #fff;
     font-weight: 700;
-    font-size: 1.05rem;
-    padding: 0.9rem 0.75rem;
+    font-size: 1rem;
+    padding: 0.65rem 0.25rem;
     border: 0;
 }
 .quadro-table tfoot td.col-operador { background: #27272a; }
+
+/* Títulos abreviados quando a coluna aperta */
+.quadro-table .lbl-abrev { display: none; }
+.quadro-table.abrev .lbl-full  { display: none; }
+.quadro-table.abrev .lbl-abrev { display: inline; }
+
+/* Telas menores: aperta mais um pouco para ainda caber */
+@media (max-width: 1280px) {
+    .quadro-table { font-size: 0.85rem; }
+    .col-operador { width: 130px; }
+    .col-resumo   { width: 72px; }
+    .col-perc     { width: 92px; }
+    .hora-chip    { font-size: 0.95rem; padding: 0.1rem 0.3rem; }
+    .total-prod   { font-size: 1rem; }
+}
 </style>
+
+<script>
+(function () {
+    const tabela = document.querySelector('.quadro-table');
+    if (!tabela) return;
+
+    const titulos = tabela.querySelectorAll('thead th.col-resumo');
+
+    function ajustar() {
+        // volta ao texto completo e mede se algum título estoura a coluna
+        tabela.classList.remove('abrev');
+        const estoura = Array.from(titulos).some(th => th.scrollWidth > th.clientWidth);
+        tabela.classList.toggle('abrev', estoura);
+    }
+
+    window.addEventListener('resize', ajustar);
+    if (document.fonts && document.fonts.ready) {
+        document.fonts.ready.then(ajustar);
+    }
+    ajustar();
+})();
+</script>
 {% endblock %}
