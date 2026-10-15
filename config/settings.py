@@ -177,6 +177,10 @@ DATA_UPLOAD_MAX_MEMORY_SIZE = 10485760
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 USE_X_FORWARDED_HOST = True
 
+# Configuração de Sessão Única por Aplicação
+SESSION_COOKIE_NAME = 'sessionid_tempo_producao'
+CSRF_COOKIE_NAME = 'csrftoken_tempo_producao'
+
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/6.0/howto/static-files/
