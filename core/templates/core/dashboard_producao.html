@@ -1,161 +1,4 @@
 {% extends "core/base.html" %}
-
-{% block content %}
-<div class="container-fluid py-3">
-
-    {# Título simples #}
-    <div class="d-flex align-items-baseline justify-content-between flex-wrap gap-2 mb-2">
-        <h4 class="display-font fw-bold mb-0 text-dark">Produção Hora a Hora</h4>
-        <span class="text-muted small mono text-uppercase">Acompanhamento por tabela</span>
-    </div>
-
-    {# Barra de filtros compacta #}
-    <form method="get" class="filtro-bar mb-3">
-        <div class="d-flex flex-wrap align-items-end gap-2">
-            <div>
-                <label class="form-label small text-muted mb-0">Data</label>
-                <input type="date" name="data" value="{{ filtros.data }}" class="form-control form-control-sm">
-            </div>
-
-            <div>
-                <label class="form-label small text-muted mb-0">Setor</label>
-                <select name="setor" class="form-select form-select-sm">
-                    <option value="">Todos</option>
-                    {% for s in setores %}
-                        <option value="{{ s.id }}" {% if filtros.setor_id == s.id|stringformat:"s" %}selected{% endif %}>
-                            {{ s.nome }}
-                        </option>
-                    {% endfor %}
-                </select>
-            </div>
-
-            <div>
-                <label class="form-label small text-muted mb-0">Operador</label>
-                <select name="operador" class="form-select form-select-sm">
-                    <option value="">Todos</option>
-                    {% for o in operadores %}
-                        <option value="{{ o.id }}" {% if filtros.operador_id == o.id|stringformat:"s" %}selected{% endif %}>
-                            {{ o.nome }}
-                        </option>
-                    {% endfor %}
-                </select>
-            </div>
-
-            <button type="submit" class="btn btn-sm btn-dark px-3">
-                <i class="fa-solid fa-filter me-1"></i>Filtrar
-            </button>
-        </div>
-    </form>
-
-    {# Mensagens de estado #}
-    {% if not tem_filtro_ativo %}
-        <div class="alert alert-light border text-center text-muted py-4" role="alert">
-            <i class="fa-solid fa-circle-info fa-2x mb-2 text-warning d-block"></i>
-            Selecione ao menos um filtro para carregar o quadro de produção.
-        </div>
-
-    {% elif not linhas %}
-        <div class="alert alert-light border text-center text-muted py-4" role="alert">
-            <i class="fa-solid fa-triangle-exclamation fa-2x mb-2 d-block"></i>
-            Nenhum registro encontrado para os filtros selecionados.
-        </div>
-
-    {% else %}
-        <div class="card quadro border-0 shadow">
-            <div class="quadro-header d-flex justify-content-between align-items-center flex-wrap gap-2">
-                <div class="d-flex align-items-center gap-2">
-                    <i class="fa-solid fa-clock text-warning"></i>
-                    <span class="display-font fw-bold text-uppercase" style="letter-spacing: 0.06em;">
-                        Produção por hora
-                    </span>
-                </div>
-                <span class="small text-white-50">{{ linhas|length }} operador{{ linhas|length|pluralize:"es" }}</span>
-            </div>
-
-            <div class="table-responsive">
-                <table class="table quadro-table align-middle mb-0">
-                    <thead>
-                        <tr>
-                            <th class="col-operador">Operador</th>
-                            {% for h in faixas %}
-                                <th class="text-center col-hora">{{ h|stringformat:"02d" }}h</th>
-                            {% endfor %}
-                            <th class="text-center col-resumo" title="Produzido">
-                                <span class="lbl-full">Produzido</span><span class="lbl-abrev">Prod</span>
-                            </th>
-                            <th class="text-center col-resumo" title="Planejado">
-                                <span class="lbl-full">Planejado</span><span class="lbl-abrev">Plan</span>
-                            </th>
-                            <th class="text-center col-perc">% Cumprido</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for l in linhas %}
-                        <tr>
-                            <td class="col-operador">
-                                <div class="fw-bold text-truncate" title="{{ l.nome }}">{{ l.nome }}</div>
-                                <div class="small text-muted text-truncate">{{ l.setor }}</div>
-                            </td>
-
-                            {% for c in l.celulas %}
-                                {% if c %}
-                                    <td class="text-center">
-                                        <span class="hora-chip hora-{{ c.cor }}"
-                                            title="{{ c.dentro }} baixa{{ c.dentro|pluralize }} na meta · {{ c.fora }} fora da meta">
-                                            {{ c.produzido }}
-                                        </span>
-                                    </td>
-                                {% else %}
-                                    <td class="text-center celula-vazia">–</td>
-                                {% endif %}
-                            {% endfor %}
-
-                            <td class="text-center col-resumo total-prod">{{ l.produzido }}</td>
-                            <td class="text-center col-resumo text-muted fs-6">{{ l.esperado }}</td>
-                            <td class="col-perc">
-                                {% if l.percentual is None %}
-                                    <div class="text-center">
-                                        <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle">Sem meta</span>
-                                    </div>
-                                {% else %}
-                                    <div class="perc-valor text-center
-                                        {% if l.status == 'Abaixo' %}text-danger
-                                        {% elif l.status == 'Na Meta' %}text-primary
-                                        {% else %}text-success{% endif %}">
-                                        {{ l.percentual|floatformat:1 }}%
-                                    </div>
-                                    <div class="progress perc-barra">
-                                        <div class="progress-bar
-                                            {% if l.status == 'Abaixo' %}bg-danger
-                                            {% elif l.status == 'Na Meta' %}bg-primary
-                                            {% else %}bg-success{% endif %}"
-                                            style="width: {{ l.percentual|floatformat:0 }}%"></div>
-                                    </div>
-                                {% endif %}
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                    <tfoot>
-                        <tr>
-                            <td class="col-operador">Total</td>
-                            {% for v in totais.por_hora %}
-                                <td class="text-center">{{ v }}</td>
-                            {% endfor %}
-                            <td class="text-center col-resumo">{{ totais.produzido }}</td>
-                            <td class="text-center col-resumo">{{ totais.esperado }}</td>
-                            <td class="text-center col-perc">
-                                {% if totais.percentual is not None %}{{ totais.percentual|floatformat:1 }}%{% else %}–{% endif %}
-                            </td>
-                        </tr>
-                    </tfoot>
-                </table>
-            </div>
-        </div>
-    {% endif %}
-</div>
-{% endblock %}
-
 {% block extra_css %}
 <style>
 /* ---------- Filtros: discretos ---------- */
@@ -170,6 +13,38 @@
     min-width: 150px;
     background-color: #fff;
 }
+
+/* Filtros recolhíveis */
+.filtro-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    background: #f3f4f6;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    padding: 0.35rem 0.75rem;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: #52525b;
+    cursor: pointer;
+}
+.filtro-toggle:hover { background: #e9eaec; }
+
+.filtro-seta { transition: transform 0.25s ease; }
+.filtro-wrap.recolhido .filtro-seta { transform: rotate(180deg); }
+
+/* animação de abrir/fechar */
+.filtro-corpo {
+    display: grid;
+    grid-template-rows: 1fr;
+    transition: grid-template-rows 0.25s ease;
+}
+.filtro-corpo-inner { overflow: hidden; min-height: 0; }
+.filtro-wrap.recolhido .filtro-corpo { grid-template-rows: 0fr; }
+
+/* o formulário ganha um respiro em relação ao botão */
+.filtro-wrap .filtro-bar { margin-top: 0.4rem; }
 
 /* ---------- Quadro principal ---------- */
 .quadro {
@@ -292,6 +167,173 @@
 </style>
 {% endblock %}
 
+{% block content %}
+<div class="container-fluid py-3">
+
+    {# Título simples #}
+    <div class="d-flex align-items-baseline justify-content-between flex-wrap gap-2 mb-2">
+        <h4 class="display-font fw-bold mb-0 text-dark">Produção Hora a Hora</h4>
+        <span class="text-muted small mono text-uppercase">Acompanhamento por tabela</span>
+    </div>
+
+    {# Barra de filtros compacta #}
+    <div class="filtro-wrap mb-3" id="filtroWrap">
+        <button type="button" class="filtro-toggle" id="filtroToggle" aria-expanded="true" aria-controls="filtroCorpo">
+            <span><i class="fa-solid fa-filter me-2"></i>Filtros</span>
+            <i class="fa-solid fa-chevron-up filtro-seta"></i>
+        </button>
+
+        <div class="filtro-corpo" id="filtroCorpo">
+            <div class="filtro-corpo-inner">
+                <form method="get" class="filtro-bar">
+                    <div class="d-flex flex-wrap align-items-end gap-2">
+                        <div>
+                            <label class="form-label small text-muted mb-0">Data</label>
+                            <input type="date" name="data" value="{{ filtros.data }}" class="form-control form-control-sm">
+                        </div>
+
+                        <div>
+                            <label class="form-label small text-muted mb-0">Setor</label>
+                            <select name="setor" class="form-select form-select-sm">
+                                <option value="">Todos</option>
+                                {% for s in setores %}
+                                    <option value="{{ s.id }}" {% if filtros.setor_id == s.id|stringformat:"s" %}selected{% endif %}>
+                                        {{ s.nome }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <div>
+                            <label class="form-label small text-muted mb-0">Operador</label>
+                            <select name="operador" class="form-select form-select-sm">
+                                <option value="">Todos</option>
+                                {% for o in operadores %}
+                                    <option value="{{ o.id }}" {% if filtros.operador_id == o.id|stringformat:"s" %}selected{% endif %}>
+                                        {{ o.nome }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <button type="submit" class="btn btn-sm btn-dark px-3">
+                            <i class="fa-solid fa-filter me-1"></i>Filtrar
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    {# Mensagens de estado #}
+    {% if not tem_filtro_ativo %}
+        <div class="alert alert-light border text-center text-muted py-4" role="alert">
+            <i class="fa-solid fa-circle-info fa-2x mb-2 text-warning d-block"></i>
+            Selecione ao menos um filtro para carregar o quadro de produção.
+        </div>
+
+    {% elif not linhas %}
+        <div class="alert alert-light border text-center text-muted py-4" role="alert">
+            <i class="fa-solid fa-triangle-exclamation fa-2x mb-2 d-block"></i>
+            Nenhum registro encontrado para os filtros selecionados.
+        </div>
+
+    {% else %}
+        <div class="card quadro border-0 shadow">
+            <div class="quadro-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+                <div class="d-flex align-items-center gap-2">
+                    <i class="fa-solid fa-clock text-warning"></i>
+                    <span class="display-font fw-bold text-uppercase" style="letter-spacing: 0.06em;">
+                        Produção por hora
+                    </span>
+                </div>
+                <span class="small text-white-50">{{ linhas|length }} operador{{ linhas|length|pluralize:"es" }}</span>
+            </div>
+
+            <div class="table-responsive">
+                <table class="table quadro-table align-middle mb-0">
+                    <thead>
+                        <tr>
+                            <th class="col-operador">Operador</th>
+                            {% for h in faixas %}
+                                <th class="text-center col-hora">{{ h|stringformat:"02d" }}h</th>
+                            {% endfor %}
+                            <th class="text-center col-resumo" title="Produzido">
+                                <span class="lbl-full">Produzido</span><span class="lbl-abrev">Prod</span>
+                            </th>
+                            <th class="text-center col-resumo" title="Planejado">
+                                <span class="lbl-full">Planejado</span><span class="lbl-abrev">Plan</span>
+                            </th>
+                            <th class="text-center col-perc">% Cumprido</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for l in linhas %}
+                        <tr>
+                            <td class="col-operador">
+                                <div class="fw-bold text-truncate" title="{{ l.nome }}">{{ l.nome }}</div>
+                                <div class="small text-muted text-truncate">{{ l.setor }}</div>
+                            </td>
+
+                            {% for c in l.celulas %}
+                                {% if c %}
+                                    <td class="text-center">
+                                        <span class="hora-chip hora-{{ c.cor }}"
+                                            title="{{ c.dentro }} baixa{{ c.dentro|pluralize }} na meta · {{ c.fora }} fora da meta">
+                                            {{ c.produzido }}
+                                        </span>
+                                    </td>
+                                {% else %}
+                                    <td class="text-center celula-vazia">–</td>
+                                {% endif %}
+                            {% endfor %}
+
+                            <td class="text-center col-resumo total-prod">{{ l.produzido }}</td>
+                            <td class="text-center col-resumo text-muted fs-6">{{ l.esperado }}</td>
+                            <td class="col-perc">
+                                {% if l.percentual is None %}
+                                    <div class="text-center">
+                                        <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle">Sem meta</span>
+                                    </div>
+                                {% else %}
+                                    <div class="perc-valor text-center
+                                        {% if l.status == 'Abaixo' %}text-danger
+                                        {% elif l.status == 'Na Meta' %}text-primary
+                                        {% else %}text-success{% endif %}">
+                                        {{ l.percentual|floatformat:1 }}%
+                                    </div>
+                                    <div class="progress perc-barra">
+                                        <div class="progress-bar
+                                            {% if l.status == 'Abaixo' %}bg-danger
+                                            {% elif l.status == 'Na Meta' %}bg-primary
+                                            {% else %}bg-success{% endif %}"
+                                            style="width: {{ l.percentual|floatformat:0 }}%"></div>
+                                    </div>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                    <tfoot>
+                        <tr>
+                            <td class="col-operador">Total</td>
+                            {% for v in totais.por_hora %}
+                                <td class="text-center">{{ v }}</td>
+                            {% endfor %}
+                            <td class="text-center col-resumo">{{ totais.produzido }}</td>
+                            <td class="text-center col-resumo">{{ totais.esperado }}</td>
+                            <td class="text-center col-perc">
+                                {% if totais.percentual is not None %}{{ totais.percentual|floatformat:1 }}%{% else %}–{% endif %}
+                            </td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}
+
 {% block extra_js %}
 <script>
 (function () {
@@ -312,6 +354,26 @@
         document.fonts.ready.then(ajustar);
     }
     ajustar();
+})();
+
+(function () {
+    const wrap = document.getElementById('filtroWrap');
+    const btn = document.getElementById('filtroToggle');
+    if (!wrap || !btn) return;
+
+    const CHAVE = 'dashboard_filtros_recolhido';
+
+    function aplicar(recolhido) {
+        wrap.classList.toggle('recolhido', recolhido);
+        btn.setAttribute('aria-expanded', String(!recolhido));
+        try { localStorage.setItem(CHAVE, recolhido ? '1' : '0'); } catch (e) {}
+    }
+
+    let salvo = false;
+    try { salvo = localStorage.getItem(CHAVE) === '1'; } catch (e) {}
+    aplicar(salvo);
+
+    btn.addEventListener('click', () => aplicar(!wrap.classList.contains('recolhido')));
 })();
 </script>
 {% endblock %}
