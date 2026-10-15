@@ -1,0 +1,276 @@
+{% extends "core/base.html" %}
+
+{% block content %}
+<div class="container-fluid py-3">
+
+    {# Título simples #}
+    <div class="d-flex align-items-baseline justify-content-between flex-wrap gap-2 mb-2">
+        <h4 class="display-font fw-bold mb-0 text-dark">Produção Hora a Hora</h4>
+        <span class="text-muted small mono text-uppercase">Acompanhamento por tabela</span>
+    </div>
+
+    {# Barra de filtros compacta #}
+    <form method="get" class="filtro-bar mb-3">
+        <div class="d-flex flex-wrap align-items-end gap-2">
+            <div>
+                <label class="form-label small text-muted mb-0">Data</label>
+                <input type="date" name="data" value="{{ filtros.data }}" class="form-control form-control-sm">
+            </div>
+
+            <div>
+                <label class="form-label small text-muted mb-0">Setor</label>
+                <select name="setor" class="form-select form-select-sm">
+                    <option value="">Todos</option>
+                    {% for s in setores %}
+                        <option value="{{ s.id }}" {% if filtros.setor_id == s.id|stringformat:"s" %}selected{% endif %}>
+                            {{ s.nome }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div>
+                <label class="form-label small text-muted mb-0">Operador</label>
+                <select name="operador" class="form-select form-select-sm">
+                    <option value="">Todos</option>
+                    {% for o in operadores %}
+                        <option value="{{ o.id }}" {% if filtros.operador_id == o.id|stringformat:"s" %}selected{% endif %}>
+                            {{ o.nome }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <button type="submit" class="btn btn-sm btn-dark px-3">
+                <i class="fa-solid fa-filter me-1"></i>Filtrar
+            </button>
+        </div>
+    </form>
+
+    {# Mensagens de estado #}
+    {% if not tem_filtro_ativo %}
+        <div class="alert alert-light border text-center text-muted py-4" role="alert">
+            <i class="fa-solid fa-circle-info fa-2x mb-2 text-warning d-block"></i>
+            Selecione ao menos um filtro para carregar o quadro de produção.
+        </div>
+
+    {% elif not linhas %}
+        <div class="alert alert-light border text-center text-muted py-4" role="alert">
+            <i class="fa-solid fa-triangle-exclamation fa-2x mb-2 d-block"></i>
+            Nenhum registro encontrado para os filtros selecionados.
+        </div>
+
+    {% else %}
+        <div class="card quadro border-0 shadow">
+            <div class="quadro-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+                <div class="d-flex align-items-center gap-2">
+                    <i class="fa-solid fa-clock text-warning"></i>
+                    <span class="display-font fw-bold text-uppercase" style="letter-spacing: 0.06em;">
+                        Produção por hora
+                    </span>
+                </div>
+                <span class="small text-white-50">{{ linhas|length }} operador{{ linhas|length|pluralize:"es" }}</span>
+            </div>
+
+            <div class="table-responsive">
+                <table class="table quadro-table align-middle mb-0">
+                    <thead>
+                        <tr>
+                            <th class="col-operador">Operador</th>
+                            {% for h in faixas %}
+                                <th class="text-center col-hora">{{ h|stringformat:"02d" }}h</th>
+                            {% endfor %}
+                            <th class="text-center col-resumo">Produzido</th>
+                            <th class="text-center col-resumo">Deveria ter produzido</th>
+                            <th class="text-center col-perc">% Cumprido</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for l in linhas %}
+                        <tr>
+                            <td class="col-operador">
+                                <div class="fw-bold">{{ l.nome }}</div>
+                                <div class="small text-muted">{{ l.setor }}</div>
+                            </td>
+
+                            {% for c in l.celulas %}
+                                {% if c %}
+                                    <td class="text-center">
+                                        <span class="hora-chip hora-{{ c.cor }}"
+                                            title="{{ c.dentro }} baixa{{ c.dentro|pluralize }} na meta · {{ c.fora }} fora da meta">
+                                            {{ c.produzido }}
+                                        </span>
+                                    </td>
+                                {% else %}
+                                    <td class="text-center celula-vazia">–</td>
+                                {% endif %}
+                            {% endfor %}
+
+                            <td class="text-center col-resumo total-prod">{{ l.produzido }}</td>
+                            <td class="text-center col-resumo text-muted fs-6">{{ l.esperado }}</td>
+                            <td class="col-perc">
+                                {% if l.percentual is None %}
+                                    <div class="text-center">
+                                        <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle">Sem meta</span>
+                                    </div>
+                                {% else %}
+                                    <div class="perc-valor text-center
+                                        {% if l.status == 'Abaixo' %}text-danger
+                                        {% elif l.status == 'Na Meta' %}text-primary
+                                        {% else %}text-success{% endif %}">
+                                        {{ l.percentual|floatformat:1 }}%
+                                    </div>
+                                    <div class="progress perc-barra">
+                                        <div class="progress-bar
+                                            {% if l.status == 'Abaixo' %}bg-danger
+                                            {% elif l.status == 'Na Meta' %}bg-primary
+                                            {% else %}bg-success{% endif %}"
+                                            style="width: {{ l.percentual|floatformat:0 }}%"></div>
+                                    </div>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                    <tfoot>
+                        <tr>
+                            <td class="col-operador">Total</td>
+                            {% for v in totais.por_hora %}
+                                <td class="text-center">{{ v }}</td>
+                            {% endfor %}
+                            <td class="text-center col-resumo">{{ totais.produzido }}</td>
+                            <td class="text-center col-resumo">{{ totais.esperado }}</td>
+                            <td class="text-center col-perc">
+                                {% if totais.percentual is not None %}{{ totais.percentual|floatformat:1 }}%{% else %}–{% endif %}
+                            </td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+/* ---------- Filtros: discretos ---------- */
+.filtro-bar {
+    background: #f3f4f6;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    padding: 0.6rem 0.75rem;
+}
+.filtro-bar .form-control,
+.filtro-bar .form-select {
+    min-width: 150px;
+    background-color: #fff;
+}
+
+/* ---------- Quadro principal ---------- */
+.quadro {
+    border-radius: 10px;
+    overflow: hidden;
+}
+.quadro-header {
+    background: var(--graphite-950, #18181b);
+    color: #fff;
+    padding: 0.9rem 1.25rem;
+}
+
+.quadro-table {
+    font-size: 1rem;
+    --bs-table-bg: #fff;
+}
+
+/* Cabeçalho da tabela */
+.quadro-table thead th {
+    background: #27272a;
+    color: #fff;
+    font-size: 0.78rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    padding: 0.85rem 0.75rem;
+    border-bottom: 3px solid var(--amber-500, #f59e0b);
+    white-space: nowrap;
+}
+
+/* Linhas */
+.quadro-table tbody td {
+    padding: 0.9rem 0.75rem;
+    border-bottom: 1px solid #eef0f2;
+}
+.quadro-table tbody tr:nth-child(even) td { background: #fafafa; }
+.quadro-table tbody tr:hover td { background: #fff8e6; }
+
+/* Coluna do operador fixa ao rolar para o lado */
+.col-operador {
+    position: sticky;
+    left: 0;
+    z-index: 1;
+    min-width: 190px;
+    border-right: 1px solid #e5e7eb;
+}
+.quadro-table thead .col-operador { background: #27272a; z-index: 2; }
+.quadro-table tbody .col-operador { background: inherit; }
+.quadro-table tbody tr td.col-operador { background: #fff; }
+.quadro-table tbody tr:nth-child(even) td.col-operador { background: #fafafa; }
+.quadro-table tbody tr:hover td.col-operador { background: #fff8e6; }
+
+/* Horas: números grandes, vazio apagado */
+.col-hora { min-width: 70px; }
+
+/* Célula de hora colorida pela meta */
+.hora-chip {
+    display: inline-block;
+    min-width: 52px;
+    padding: 0.25rem 0.6rem;
+    border-radius: 8px;
+    font-size: 1.15rem;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    border: 1px solid transparent;
+}
+.hora-ok      { background: #dcfce7; color: #166534; border-color: #86efac; }
+.hora-parcial { background: #fef9c3; color: #854d0e; border-color: #fde047; }
+.hora-ruim    { background: #fee2e2; color: #991b1b; border-color: #fca5a5; }
+.hora-neutro  { background: #f4f4f5; color: #3f3f46; border-color: #e4e4e7; }
+
+.celula-vazia {
+    color: #d4d4d8;
+    font-size: 1.1rem;
+}
+
+/* Resumo */
+.col-resumo { min-width: 110px; font-variant-numeric: tabular-nums; }
+.total-prod {
+    font-size: 1.3rem;
+    font-weight: 800;
+    background: #fffbeb !important;
+    border-left: 1px solid #fde68a;
+}
+.quadro-table thead .col-resumo:first-of-type { border-left: 1px solid #3f3f46; }
+
+/* % cumprido com barra */
+.col-perc { min-width: 140px; }
+.perc-valor { font-size: 1.15rem; font-weight: 800; line-height: 1.1; }
+.perc-barra {
+    height: 6px;
+    margin-top: 4px;
+    background: #e5e7eb;
+    border-radius: 999px;
+}
+
+/* Rodapé */
+.quadro-table tfoot td {
+    background: #27272a;
+    color: #fff;
+    font-weight: 700;
+    font-size: 1.05rem;
+    padding: 0.9rem 0.75rem;
+    border: 0;
+}
+.quadro-table tfoot td.col-operador { background: #27272a; }
+</style>
+{% endblock %}

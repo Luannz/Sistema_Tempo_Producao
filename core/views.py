@@ -18,7 +18,7 @@ from django.db.models.functions import Length
 import os
 import json
 
-from .services import filtrar_registros, processar_relatorio_operadores
+from .services import filtrar_registros, processar_relatorio_operadores, agrupar_producao_por_operador
 
 def login_view(request):
     if request.user.is_authenticated:
@@ -1091,3 +1091,20 @@ def relatorios_producao(request):
     }
 
     return render(request, "core/relatorios_producao.html", context)
+
+
+@login_required
+def dashboard_producao(request):
+    registros_qs, filtros = filtrar_registros(request)
+    linhas, faixas, totais = agrupar_producao_por_operador(registros_qs)
+
+    context = {
+        "linhas": linhas,
+        "faixas": faixas,
+        "totais": totais,
+        "filtros": filtros,
+        "tem_filtro_ativo": any(filtros.values()),
+        "setores": Setor.objects.all(),
+        "operadores": Operador.objects.all(),
+    }
+    return render(request, "core/dashboard_producao.html", context)

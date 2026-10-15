@@ -26,11 +26,13 @@ def filtrar_registros(request):
         "item_ficha__ficha__operador",
         "item_ficha__ficha__operador__setor",
         "item_ficha__modelo",
+        "item_ficha__ficha",
+        "peca",
     ).order_by("registrado_em")
 
     if data:
         registros_qs = registros_qs.filter(
-            registrado_em__date=data
+            item_ficha__ficha__data_criacao=data
         )
     if setor_id:
         registros_qs = registros_qs.filter(
@@ -295,3 +297,122 @@ def processar_relatorio_operadores(registros_qs, page=1, per_page=10):
         )
 
     return relatorio_operadores, pagina_operadores
+
+def agrupar_producao_por_operador(registros_qs):
+    """Uma linha por operador, com colunas de hora em hora.
+
+    Planejado = Deveria ter produzido = soma do total_planejado das fichas
+    do operador (cada ficha conta uma vez só).
+    """
+    operadores = {}
+    horas_com_registro = set()
+
+    for reg in registros_qs:
+        ficha = reg.item_ficha.ficha
+        operador = ficha.operador
+        hora = timezone.localtime(reg.registrado_em).hour
+        horas_com_registro.add(hora)
+
+        if operador.id not in operadores:
+            operadores[operador.id] = {
+                "nome": operador.nome,
+                "setor": operador.setor.nome if operador.setor else "Sem Setor",
+                "fichas": {},               # ficha.id -> total_planejado
+                "horas": defaultdict(
+                    lambda: {"produzido": 0, "dentro": 0, "fora": 0}  # hora -> produzido
+                ),
+            }
+        op = operadores[operador.id]
+
+        op["fichas"][ficha.id] = ficha.total_planejado or 0
+        h = op["horas"][hora]
+        h["produzido"] += reg.quantidade_produzida
+
+        meta = _obter_prod_h_base(reg)
+        if meta > 0:
+            if reg.quantidade_produzida >= meta:
+                h["dentro"] += 1
+            else:
+                h["fora"] += 1
+
+    faixas = (
+        list(range(min(horas_com_registro), max(horas_com_registro) + 1))
+        if horas_com_registro
+        else []
+    )
+
+    linhas = []
+    totais = {
+        "planejado": 0,
+        "produzido": 0,
+        "esperado": 0,
+        "por_hora": [0] * len(faixas),
+    }
+
+    for op in sorted(operadores.values(), key=lambda o: o["nome"]):
+        celulas = []
+        produzido_total = 0
+
+        for idx, hora in enumerate(faixas):
+            if hora in op["horas"]:
+                h = op["horas"][hora]
+
+                if h["dentro"] and not h["fora"]:
+                    cor = "ok"        # todas dentro da meta
+                elif h["fora"] and not h["dentro"]:
+                    cor = "ruim"      # todas fora da meta
+                elif h["dentro"] and h["fora"]:
+                    cor = "parcial"   # mistura
+                else:
+                    cor = "neutro"    # sem meta cadastrada
+
+                celulas.append(
+                    {
+                        "produzido": h["produzido"],
+                        "dentro": h["dentro"],
+                        "fora": h["fora"],
+                        "cor": cor,
+                    }
+                )
+                produzido_total += h["produzido"]
+                totais["por_hora"][idx] += h["produzido"]
+            else:
+                celulas.append(None)
+
+        planejado = sum(op["fichas"].values())
+        esperado = planejado
+
+        if esperado > 0:
+            percentual = produzido_total / esperado * 100
+            if produzido_total < esperado:
+                status = "Abaixo"
+            elif produzido_total == esperado:
+                status = "Na Meta"
+            else:
+                status = "Acima"
+        else:
+            percentual = None
+            status = "Sem meta"
+
+        linhas.append(
+            {
+                "nome": op["nome"],
+                "setor": op["setor"],
+                "celulas": celulas,
+                "planejado": planejado,
+                "produzido": produzido_total,
+                "esperado": esperado,
+                "percentual": percentual,
+                "status": status,
+            }
+        )
+
+        totais["planejado"] += planejado
+        totais["produzido"] += produzido_total
+        totais["esperado"] += esperado
+
+    totais["percentual"] = (
+        totais["produzido"] / totais["esperado"] * 100 if totais["esperado"] > 0 else None
+    )
+
+    return linhas, faixas, totais
