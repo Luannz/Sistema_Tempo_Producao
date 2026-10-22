@@ -9,14 +9,18 @@ def filtrar_registros(request):
     setor_id = request.GET.get("setor", "")
     operador_id = request.GET.get("operador", "")
 
+     # Checa o que o usuário realmente preencheu (antes de travar o setor)
+    tem_filtro_ativo = any([data, setor_id, operador_id])
+
+    # quem não é admin só enxerga o próprio setor, ignorando a URL
+    if request.user.tipo != "admin":
+        setor_id = str(request.user.setor_id or 0)  # sem setor: não vê nada
+
     filtros = {
         "data": data,
         "setor_id": setor_id,
         "operador_id": operador_id,
     }
-
-    # Checa se o usuário enviou algum filtro preenchido
-    tem_filtro_ativo = any([data, setor_id, operador_id])
 
     # Se nenhum filtro foi selecionado, retorna QuerySet vazia
     if not tem_filtro_ativo:

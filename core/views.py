@@ -1098,13 +1098,21 @@ def dashboard_producao(request):
     registros_qs, filtros = filtrar_registros(request)
     linhas, faixas, totais = agrupar_producao_por_operador(registros_qs)
 
+    if request.user.tipo == "admin":
+        setores = Setor.objects.all()
+        operadores = Operador.objects.all()
+    else:
+        setor_id = request.user.setor_id or 0
+        setores = Setor.objects.filter(id=setor_id)
+        operadores = Operador.objects.filter(setor_id=setor_id)
+
     context = {
         "linhas": linhas,
         "faixas": faixas,
         "totais": totais,
         "filtros": filtros,
         "tem_filtro_ativo": any(filtros.values()),
-        "setores": Setor.objects.all(),
-        "operadores": Operador.objects.all(),
+        "setores": setores,
+        "operadores": operadores,
     }
     return render(request, "core/dashboard_producao.html", context)
