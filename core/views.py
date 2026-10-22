@@ -1111,7 +1111,7 @@ def dashboard_producao(request):
         "faixas": faixas,
         "totais": totais,
         "filtros": filtros,
-        "tem_filtro_ativo": any(filtros.values()),
+        "tem_filtro_ativo": any([filtros["data"], request.GET.get("setor"), request.GET.get("operador")]),
         "setores": setores,
         "operadores": operadores,
     }
