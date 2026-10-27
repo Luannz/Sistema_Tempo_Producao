@@ -789,21 +789,24 @@ def visualizar_ficha(request, ficha_id):
     eh_numerada = ficha.tipo == 'numerada'
     itens_resumo = []
 
-    # Inicialização dos totais gerais da ficha
-    total_produzido_geral = 0
-    total_perda_geral = 0
-    total_planejado_geral = 0
-    total_tempo_restante_min = 0
+    # --- TOTAIS GERAIS DA FICHA (direto do banco) ---
+    totais_gerais = RegistroProducao.objects.filter(
+        item_ficha__ficha=ficha
+    ).aggregate(
+        total_produzido=Sum('quantidade_produzida'),
+        total_perda=Sum('quantidade_perda'),
+    )
+
+    total_produzido_geral = totais_gerais['total_produzido'] or 0
+    total_perda_geral = totais_gerais['total_perda'] or 0
+    total_planejado_geral = (ficha.total_planejado or 0) if eh_numerada else 0
+    total_tempo_restante_min = 0  # esse continua somado no loop
 
     for item in ficha.itens.all():
         # --- CÁLCULO DO MODELO (REGISTROS SEM PEÇA) ---
         registros_modelo = [r for r in item.registros.all() if r.peca_id is None]
         produzido = sum(r.quantidade_produzida for r in registros_modelo)
         perda_modelo = sum(r.quantidade_perda for r in registros_modelo)
-
-        # Soma nos totais gerais
-        total_produzido_geral += produzido
-        total_perda_geral += perda_modelo
 
         # Ficha Numerada (Modelo)
         qtd_planejada = item.quantidade_planejada if eh_numerada else None
@@ -812,21 +815,12 @@ def visualizar_ficha(request, ficha_id):
         tempo_restante_min = item.tempo_restante_minutos(produzido) if eh_numerada else None
         tempo_restante_formatado = item.tempo_restante_formatado(produzido) if eh_numerada else None
 
-        if eh_numerada:
-            total_planejado_geral = ficha.total_planejado or 0
-        else:
-            total_planejado_geral = 0
-
         # --- CÁLCULO DAS PEÇAS ---
         pecas_resumo = []
         for habilitacao in item.pecas_habilitadas.all():
             registros_peca = [r for r in item.registros.all() if r.peca_id == habilitacao.peca_id]
             produzido_peca = sum(r.quantidade_produzida for r in registros_peca)
             perda_peca = sum(r.quantidade_perda for r in registros_peca)
-
-            # Soma das peças nos totais gerais
-            total_produzido_geral += produzido_peca
-            total_perda_geral += perda_peca
 
             qtd_planejada_peca = habilitacao.quantidade_planejada if eh_numerada else None
             qtd_restante_peca = habilitacao.qtd_restante(produzido_peca) if eh_numerada else None
@@ -835,7 +829,6 @@ def visualizar_ficha(request, ficha_id):
             tempo_restante_formatado_peca = habilitacao.tempo_restante_formatado(produzido_peca) if eh_numerada else None
 
             if eh_numerada:
-                total_planejado_geral += qtd_planejada_peca or 0
                 total_tempo_restante_min += tempo_restante_min_peca or 0
 
             pecas_resumo.append({
